@@ -1,10 +1,12 @@
 import socket
 import threading
 
+VERSION = "1.2.5"
+
 ### Configuration ###
 
 ANTI_SPAM_MESSAGE = "Bitte senden Sie keine doppelten Nachrichten."
-WELCOME_MESSAGE = "Willkommen auf dem Server!"
+WELCOME_MESSAGE = f"Willkommen auf dem Server! (mcefli v{VERSION})"
 
 ### end Configuration ###
 
@@ -12,6 +14,9 @@ users = []
 users_lock = threading.Lock()
 clients = []  
 clients_lock = threading.Lock()  
+
+history = []
+history_lock = threading.Lock()
 
 def init_server(host, port):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -21,11 +26,20 @@ def init_server(host, port):
     print(f"Server lauscht auf {host}:{port}")
     return server_socket
 
-def sendall(message):
+def sendall(message, client_socket=None):
     global clients
     for client in clients:
-        if client != threading.current_thread():
+        if client != client_socket:
             client.sendall(message.encode())
+
+def send_history(client_socket):
+    global history
+    history_lock.acquire()
+    client_socket.sendall("his_start".encode())
+    for msg in history:
+        client_socket.sendall(msg.encode())
+    client_socket.sendall("his_complete".encode())
+    history_lock.release()
 
 def handle_client(client_socket, addr):
     global clients
@@ -38,33 +52,38 @@ def handle_client(client_socket, addr):
     users_lock.acquire()
     users.append(username)
     users_lock.release()
-    sendall(f"{username} hat den Chat betreten.")
+    sendall(f"{username} hat den Chat betreten.", client_socket)
 
     client_socket.sendall(WELCOME_MESSAGE.encode())
     clients.append(client_socket)
     last_message = ""
+
     while True:
         data = client_socket.recv(1024)
+        if data == b"get_history":
+            send_history(client_socket)
+            continue
         if last_message == data:
             client_socket.sendall(ANTI_SPAM_MESSAGE.encode())
             continue
         else: 
             last_message = data
-
         if not data:
             break
 
         message = f"{username}: {data.decode()}"
         print(f"[{addr}]: {message}")
-
-        sendall(message)
+        history_lock.acquire()
+        history.append(message)
+        history_lock.release()
+        sendall(message, client_socket)
 
     users_lock.acquire()
     users.remove(username)
     users_lock.release()
     clients.remove(client_socket)
     print(f"Verbindung von {addr} geschlossen!")
-    sendall(f"{username} hat den Chat verlassen.")
+    sendall(f"{username} hat den Chat verlassen.", client_socket)
     client_socket.close()
 
 def main():
