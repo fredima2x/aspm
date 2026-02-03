@@ -8,6 +8,7 @@ WELCOME_MESSAGE = "Willkommen auf dem Server!"
 
 ### end Configuration ###
 
+users = []
 clients = []  
 clients_lock = threading.Lock()  
 
@@ -19,11 +20,20 @@ def init_server(host, port):
     print(f"Server lauscht auf {host}:{port}")
     return server_socket
 
+def sendall(message):
+    global clients
+    for client in clients:
+        if client != threading.current_thread():
+            client.sendall(message.encode())
+
 def handle_client(client_socket, addr):
     global clients
     global clients_lock
     print(f"Verbindung von {addr} akzeptiert")
-    
+    encodet_username = client_socket.recv(1024)
+    username = encodet_username.decode()
+    users.append((username, addr))
+
     client_socket.sendall(WELCOME_MESSAGE.encode())
     clients.append(client_socket)
     last_message = ""
@@ -38,13 +48,12 @@ def handle_client(client_socket, addr):
         if not data:
             break
 
-        message = data.decode()
+        message = f"{username}: {data.decode()}"
         print(f"[{addr}]: {message}")
 
-        for client in clients:
-            if client != client_socket:
-                client.send(data)
+        sendall(message)
 
+    users.remove((username, addr))
     clients.remove(client_socket)
     print(f"Verbindung von {addr} geschlossen!")
     client_socket.close()

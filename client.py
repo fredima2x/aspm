@@ -13,7 +13,7 @@ def start_session():
 def connect_to_server(host, port):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
-    client_socket.sendall(f"{username} ist dem Chat beigetreten.".encode())
+    client_socket.sendall(username.encode())
     print("\n" + "-"*50)
     return client_socket
 
