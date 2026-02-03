@@ -28,7 +28,7 @@ def handle_client(client_socket, addr):
         message = data.decode()
         print(f"[{addr}]: {message}")
 
-        feor clint in clients:
+        for client in clients:
             if client != client_socket:
                 client.send(data)
 
