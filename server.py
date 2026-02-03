@@ -1,8 +1,8 @@
 import socket
 import threading
 
-clients = []  # List to store connected client sockets
-clients_lock = threading.Lock()  # Lock for thread-safe access to clients list
+clients = []  
+clients_lock = threading.Lock()  
 
 def init_server(host, port):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -18,26 +18,23 @@ def handle_client(client_socket, addr):
     print(f"Verbindung von {addr} akzeptiert")
     welcome_message = "Willkommen auf dem Server!"
     client_socket.sendall(welcome_message.encode())
-    with clients_lock:
-        clients.append(client_socket)  # Add new client to the list
-    try:
-        while True:
-            data = client_socket.recv(1024)
-            if not data:
-                break
-            message = data.decode()
-            print(f"[{addr}]: {message}")
-            with clients_lock:
-                for client in clients:
-                    try:
-                        client.sendall(data)
-                    except Exception as e:
-                        print(f"Error sending message to {client}: {e}")
-    finally:
-        with clients_lock:
-            clients.remove(client_socket)  # Remove client from the list upon disconnect
-        print(f"Verbindung von {addr} geschlossen!")
-        client_socket.close()
+    clients.append(client_socket)
+    while True:
+        data = client_socket.recv(1024)
+
+        if not data:
+            break
+
+        message = data.decode()
+        print(f"[{addr}]: {message}")
+
+        for client in clients:
+            if client != client_socket:
+                client.sendall(data)
+
+    clients.remove(client_socket)
+    print(f"Verbindung von {addr} geschlossen!")
+    client_socket.close()
 
 def main():
     server_socket = init_server("localhost", 8080)
