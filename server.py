@@ -9,6 +9,7 @@ WELCOME_MESSAGE = "Willkommen auf dem Server!"
 ### end Configuration ###
 
 users = []
+users_lock = threading.Lock()
 clients = []  
 clients_lock = threading.Lock()  
 
@@ -29,10 +30,15 @@ def sendall(message):
 def handle_client(client_socket, addr):
     global clients
     global clients_lock
+    global users
+    global users_lock
     print(f"Verbindung von {addr} akzeptiert")
     encodet_username = client_socket.recv(1024)
     username = encodet_username.decode()
-    users.append((username, addr))
+    users_lock.acquire()
+    users.append(username)
+    users_lock.release()
+    sendall(f"{username} hat den Chat betreten.")
 
     client_socket.sendall(WELCOME_MESSAGE.encode())
     clients.append(client_socket)
@@ -53,16 +59,18 @@ def handle_client(client_socket, addr):
 
         sendall(message)
 
-    users.remove((username, addr))
+    users_lock.acquire()
+    users.remove(username)
+    users_lock.release()
     clients.remove(client_socket)
     print(f"Verbindung von {addr} geschlossen!")
+    sendall(f"{username} hat den Chat verlassen.")
     client_socket.close()
 
 def main():
     server_socket = init_server("localhost", 8080)
     while True:
         client_socket, addr = server_socket.accept()
-        
         client_handler = threading.Thread(target=handle_client, args=(client_socket, addr))
         client_handler.start()
     

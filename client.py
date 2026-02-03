@@ -21,7 +21,7 @@ def connect_to_server(host, port):
 def send(client_socket):
     while True:
         inputs = input()
-        message = f"{username}: {inputs}"
+        message = inputs
         if inputs.lower() == 'quit':
             client_socket.close()
             break
