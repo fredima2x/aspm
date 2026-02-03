@@ -23,6 +23,7 @@ def handle_client(client_socket, addr):
     global clients
     global clients_lock
     print(f"Verbindung von {addr} akzeptiert")
+    
     client_socket.sendall(WELCOME_MESSAGE.encode())
     clients.append(client_socket)
     last_message = ""

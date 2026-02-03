@@ -13,6 +13,7 @@ def start_session():
 def connect_to_server(host, port):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
+    client_socket.sendall(f"{username} ist dem Chat beigetreten.".encode())
     print("\n" + "-"*50)
     return client_socket
 
@@ -21,7 +22,7 @@ def send(client_socket):
     while True:
         inputs = input()
         message = f"{username}: {inputs}"
-        if message.lower() == 'quit':
+        if inputs.lower() == 'quit':
             client_socket.close()
             break
         client_socket.sendall(message.encode())
@@ -32,10 +33,7 @@ def receive_messages(client_socket):
         response = client_socket.recv(1024)
         if not response:
             break
-
-
         print("\r" + " " * 80 + "\r", end='')
-
         print(response.decode())
         print(f"{username}> ", end='', flush=True)
 
@@ -45,7 +43,6 @@ def main():
     receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
     receive_thread.start()
     send(client_socket)
-
 
 if __name__ == "__main__":
     main()    
