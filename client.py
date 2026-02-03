@@ -13,23 +13,31 @@ def start_session():
 def connect_to_server(host, port):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
+    print("\n" + "-"*50)
     return client_socket
+
 
 def send(client_socket):
     while True:
-        inputs = input(f"{username}> ")
+        inputs = input()
         message = f"{username}: {inputs}"
         if message.lower() == 'quit':
             client_socket.close()
             break
         client_socket.sendall(message.encode())
+        print(f"{username}> ", end='', flush=True)
 
 def receive_messages(client_socket):
     while True:
         response = client_socket.recv(1024)
         if not response:
             break
+
+
+        print("\r" + " " * 80 + "\r", end='')
+
         print(response.decode())
+        print(f"{username}> ", end='', flush=True)
 
 def main():
     start_session()
