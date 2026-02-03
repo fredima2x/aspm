@@ -30,7 +30,7 @@ def handle_client(client_socket, addr):
 
         for client in clients:
             if client != client_socket:
-                client.sendall(data)
+                client.send(data)
 
     clients.remove(client_socket)
     print(f"Verbindung von {addr} geschlossen!")
