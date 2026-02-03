@@ -1,6 +1,13 @@
 import socket
 import threading
 
+### Configuration ###
+
+ANTI_SPAM_MESSAGE = "Bitte senden Sie keine doppelten Nachrichten."
+WELCOME_MESSAGE = "Willkommen auf dem Server!"
+
+### end Configuration ###
+
 clients = []  
 clients_lock = threading.Lock()  
 
@@ -16,11 +23,16 @@ def handle_client(client_socket, addr):
     global clients
     global clients_lock
     print(f"Verbindung von {addr} akzeptiert")
-    welcome_message = "Willkommen auf dem Server!"
-    client_socket.sendall(welcome_message.encode())
+    client_socket.sendall(WELCOME_MESSAGE.encode())
     clients.append(client_socket)
+    last_message = ""
     while True:
         data = client_socket.recv(1024)
+        if last_message == data:
+            client_socket.sendall(ANTI_SPAM_MESSAGE.encode())
+            continue
+        else: 
+            last_message = data
 
         if not data:
             break

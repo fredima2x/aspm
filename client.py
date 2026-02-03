@@ -3,6 +3,13 @@ import threading
 
 messages_lock = threading.Lock()
 
+def start_session():
+    print("Client-Session gestartet.")
+    print("Geben Sie 'quit' ein, um die Sitzung zu beenden.")
+    global username
+    username = input("Geben Sie Ihren Benutzernamen ein: ")
+    print(f"Willkommen, {username}!")
+
 def connect_to_server(host, port):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
@@ -10,7 +17,8 @@ def connect_to_server(host, port):
 
 def send(client_socket):
     while True:
-        message = input()
+        inputs = input(f"{username}> ")
+        message = f"{username}: {inputs}"
         if message.lower() == 'quit':
             client_socket.close()
             break
@@ -21,9 +29,10 @@ def receive_messages(client_socket):
         response = client_socket.recv(1024)
         if not response:
             break
-        print("Server:", response.decode())
+        print(response.decode())
 
 def main():
+    start_session()
     client_socket = connect_to_server("localhost", 8080)
     receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
     receive_thread.start()
