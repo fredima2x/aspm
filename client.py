@@ -1,3 +1,5 @@
+#! /bin/python
+
 import socket
 import threading
 
@@ -16,18 +18,6 @@ def connect_to_server(host, port):
     client_socket.sendall(username.encode())
     print("\n" + "-"*50)
     return client_socket
-
-def get_history(client_socket):
-    client_socket.sendall("get_history".encode())
-    while True:
-        response = client_socket.recv(1024)
-        if response.decode() == "his_start":
-            print("Chat-Verlauf wird geladen...")
-            continue
-        elif response.decode() == "his_complete":
-            break
-        else:
-            print(response.decode())
 
 def send(client_socket):
     while True:
@@ -53,7 +43,6 @@ def main():
     client_socket = connect_to_server("localhost", 8080)
     receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
     receive_thread.start()
-    get_history(client_socket)
     send(client_socket)
 
 if __name__ == "__main__":

@@ -1,3 +1,5 @@
+#!/bin/python
+
 import socket
 import threading
 
@@ -7,6 +9,7 @@ VERSION = "1.2.5"
 
 ANTI_SPAM_MESSAGE = "Bitte senden Sie keine doppelten Nachrichten."
 WELCOME_MESSAGE = f"Willkommen auf dem Server! (mcefli v{VERSION})"
+MAX_HISTORY_MESSAGES = 16
 
 ### end Configuration ###
 
@@ -34,11 +37,12 @@ def sendall(message, client_socket=None):
 
 def send_history(client_socket):
     global history
+    global history_lock
     history_lock.acquire()
-    client_socket.sendall("his_start".encode())
-    for msg in history:
+    history_to_send = history[-MAX_HISTORY_MESSAGES:]
+    for msg in history_to_send:
+        client_socket.sendall("\n".encode())
         client_socket.sendall(msg.encode())
-    client_socket.sendall("his_complete".encode())
     history_lock.release()
 
 def handle_client(client_socket, addr):
@@ -58,11 +62,10 @@ def handle_client(client_socket, addr):
     clients.append(client_socket)
     last_message = ""
 
+    send_history(client_socket)
+
     while True:
         data = client_socket.recv(1024)
-        if data == b"get_history":
-            send_history(client_socket)
-            continue
         if last_message == data:
             client_socket.sendall(ANTI_SPAM_MESSAGE.encode())
             continue
