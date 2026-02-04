@@ -4,7 +4,7 @@ from random import randint
 import socket
 import threading
 
-VERSION = "1.3.4"
+VERSION = "1.3.5"
 
 ### Configuration ###
 
@@ -91,7 +91,7 @@ def handle_client(client_socket, addr):
     online_users_lock.release()
 
 
-    sendall(f"{username} hat den Chat betreten.", client_socket)
+    sendall(f"\033[36m{username} hat den Chat betreten.\033[0m", client_socket)
 
     clients_lock.acquire()
     client_socket.sendall(WELCOME_MESSAGE.encode())
@@ -112,7 +112,13 @@ def handle_client(client_socket, addr):
         if not data:
             break
 
-        message = f"{username}: {data.decode()}"
+        # Wenn ein username in der Nachricht erwähnt wird, wird der username eingefährbt in magenta gesendet, sonst in weiß
+        mentioned_users = [u for u in online_users if u in data.decode()]
+        if username in mentioned_users:
+            message = f"{username}: \033[35m{data.decode()}\033[0m"
+        else:
+            message = f"{username}: {data.decode()}"
+    
         print(f"[{addr}]: {message}")
         history_lock.acquire()
         history.append(message)
@@ -126,7 +132,7 @@ def handle_client(client_socket, addr):
     online_users.remove(username)
     online_users_lock.release()
     print(f"Verbindung von {addr} geschlossen!")
-    sendall(f"{username} hat den Chat verlassen.", client_socket)
+    sendall(f"\033[36m{username} hat den Chat verlassen.\033[0m", client_socket)
     client_socket.close()
 
 def main():
