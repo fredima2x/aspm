@@ -4,7 +4,7 @@ from random import randint
 import socket
 import threading
 
-VERSION = "1.3.5"
+VERSION = "1.3.6"
 
 ### Configuration ###
 
@@ -36,7 +36,11 @@ def sendall(message, client_socket=None):
     global clients
     for client in clients:
         if client != client_socket:
-            client.sendall(message.encode())
+            try:
+                client.sendall(message.encode())
+            except:
+                pass
+
 
 def send_history(client_socket):
     global history
