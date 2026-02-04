@@ -38,13 +38,25 @@ def init_server(host, port):
     return server_socket
 
 def sendall(message, client_socket=None):
+    clients_lock.acquire()
     global clients
+    clients_to_remove = []
     for client in clients:
         if client != client_socket:
             try:
-                client.sendall(message.encode())
-            except:
+                client[0].sendall(message.encode())
+            except (OSError, BrokenPipeError, ConnectionResetError):
+                clients_to_remove.append(client)
+            except Exception:
                 pass
+    # Remove disconnected clients
+    for client in clients_to_remove:
+        try:
+            clients.remove(client)
+            print(f"Client {client[1]} wurde entfernt (Verbindung unterbrochen)")
+        except ValueError:
+            pass
+    clients_lock.release()
 
 
 def send_history(client_socket):
@@ -53,8 +65,12 @@ def send_history(client_socket):
     history_lock.acquire()
     history_to_send = history[-MAX_HISTORY_MESSAGES:]
     for msg in history_to_send:
-        client_socket.sendall("\n".encode())
-        client_socket.sendall(msg.encode())
+        try:
+            client_socket.sendall("\n".encode())
+            client_socket.sendall(msg.encode())
+        except (OSError, BrokenPipeError, ConnectionResetError):
+            history_lock.release()
+            return
     history_lock.release()
 
 def handle_client(client_socket, addr):
@@ -63,8 +79,21 @@ def handle_client(client_socket, addr):
     global users
     global users_lock
     print(f"Verbindung von {addr} akzeptiert")
-    encodet_username = client_socket.recv(1024)
-    username = encodet_username.decode()
+    
+    try:
+        encodet_username = client_socket.recv(1024)
+        if not encodet_username:
+            client_socket.close()
+            return
+        username = encodet_username.decode()
+    except OSError as e:
+        print(f"Fehler beim Empfangen vom Client {addr}: {e}")
+        client_socket.close()
+        return
+    except Exception as e:
+        print(f"Unerwarteter Fehler beim Empfangen vom Client {addr}: {e}")
+        client_socket.close()
+        return
 
     # Anti-double login
     online_users_lock.acquire()
@@ -102,7 +131,7 @@ def handle_client(client_socket, addr):
     # Check Admin Status:
     if password == OPERATOR_PASSWORD and username == OPERATOR_USERNAME:
         IS_ADMIN = True
-        client_socket.sendall("\n Warnung Administrator Account!")
+        client_socket.sendall("\n Warnung Administrator Account!".encode())
     else:
         IS_ADMIN = False
 
@@ -118,14 +147,26 @@ def handle_client(client_socket, addr):
 
     # Main loop
     while True:
-        data = client_socket.recv(1024)
+        try:
+            data = client_socket.recv(1024)
+        except OSError as e:
+            print(f"Socket-Fehler bei Client {addr}: {e}")
+            break
+        except Exception as e:
+            print(f"Unerwarteter Fehler bei Client {addr}: {e}")
+            break
+            
+        if not data:
+            break
+            
         if last_message == data:
-            client_socket.sendall(ANTI_SPAM_MESSAGE.encode())
+            try:
+                client_socket.sendall(ANTI_SPAM_MESSAGE.encode())
+            except OSError:
+                break
             continue
         else: 
             last_message = data
-        if not data:
-            break
         
         # Check for commands starting with "/"
         if data.decode().startswith("/"):
@@ -190,3 +231,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+

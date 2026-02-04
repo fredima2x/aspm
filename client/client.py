@@ -1,5 +1,4 @@
 #! /bin/python
-import tkinter as tk
 import socket
 import threading
 
@@ -9,14 +8,6 @@ SERVER_PORT = 8080         # Server-Port (muss mit dem Server übereinstimmen)
 
 # DEBUG: DONT CHANGE THIS
 GUI_ENABLED = False
-
-if GUI_ENABLED:
-    window = tk.Tk()
-    window.title("mcefli Client")
-    window.geometry("400x300")
-
-    label = tk.Label(window, text="mcefli Client", font=("Arial", 16))
-    label.pack(pady=20)
 
 messages_lock = threading.Lock()
 
@@ -66,9 +57,6 @@ def main():
     client_socket = connect_to_server(SERVER_HOST, SERVER_PORT)
     receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
     receive_thread.start()
-    if GUI_ENABLED:
-        window_thread = threading.Thread(target=window_loop)
-        window_thread.start()
     send(client_socket)
 
 if __name__ == "__main__":
