@@ -63,7 +63,7 @@ def window_loop():
 
 def main():
     start_session()
-    client_socket = connect_to_server("localhost", 8080)
+    client_socket = connect_to_server(SERVER_HOST, SERVER_PORT)
     receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
     receive_thread.start()
     if GUI_ENABLED:

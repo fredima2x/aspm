@@ -8,6 +8,9 @@ VERSION = "1.3.6"
 # Important:
 SERVER_PORT = 8080          # Standard Port: 8080
 VERIFIED_SERVER = True      # Wenn True, müssen sich Benutzer mit Passwort anmelden oder registrieren
+OPERATOR_USERNAME = "admin" # Benutzername für Operator-Befehle (z.B. Kick, Ban) 
+OPERATOR_PASSWORD = "admin" # Passwort für Operator-Befehle (z.B. Kick, Ban)
+ANTI_ALT_ACCOUNT = False    # Verhindert mehrere logins mit der gleichen IP-Addresse
 
 # Non-important:
 ANTI_SPAM_MESSAGE = "Bitte senden Sie keine doppelten Nachrichten."     # Hinweis bei Spam-Versuch
@@ -96,12 +99,18 @@ def handle_client(client_socket, addr):
     online_users.append(username)
     online_users_lock.release()
 
+    # Check Admin Status:
+    if password == OPERATOR_PASSWORD and username == OPERATOR_USERNAME:
+        IS_ADMIN = True
+        client_socket.sendall("\n Warnung Administrator Account!")
+    else:
+        IS_ADMIN = False
 
     sendall(f"\033[36m{username} hat den Chat betreten.\033[0m", client_socket)
 
     clients_lock.acquire()
     client_socket.sendall(WELCOME_MESSAGE.encode())
-    clients.append(client_socket)
+    clients.append((client_socket, username))
     clients_lock.release()
     last_message = ""
 
@@ -117,6 +126,37 @@ def handle_client(client_socket, addr):
             last_message = data
         if not data:
             break
+        
+        # Check for commands starting with "/"
+        if data.decode().startswith("/"):
+            command = data.decode()[1:].split()[0]
+            if command == "online":
+                online_users_lock.acquire()
+                online_list = ", ".join(online_users)
+                online_users_lock.release()
+                client_socket.sendall(f"Online Benutzer: {online_list}".encode())
+                continue
+        # Check for Admin commands starting with "!"
+        if data.decode().startswith("!"):
+            command = data.decode()[1:].split()[0]
+            if IS_ADMIN:
+                if command == "kick":
+                    target_user = data.decode().split()[1]
+                    online_users_lock.acquire()
+                    if target_user in online_users:
+                        online_users_lock.release()
+                        clients_lock.acquire()
+                        for c in clients:
+                            if c[1] == target_user:
+                                c[0].sendall("Sie wurden vom Server gekickt.".encode())
+                                c[0].close()
+                                clients.remove(c)
+                                break
+                        clients_lock.release()
+                        sendall(f"\033[31m{target_user} wurde vom Server gekickt.\033[0m")       
+            else:
+                client_socket.sendall("Keine Berechtigung für Admin-Befehle.".encode())
+                continue
 
         # Wenn ein username in der Nachricht erwähnt wird, wird der username eingefährbt in magenta gesendet, sonst in weiß
         mentioned_users = [u for u in online_users if u in data.decode()]
@@ -132,7 +172,7 @@ def handle_client(client_socket, addr):
         sendall(message, client_socket)
 
     clients_lock.acquire()
-    clients.remove(client_socket)
+    clients.remove((client_socket, username))
     clients_lock.release() 
     online_users_lock.acquire()
     online_users.remove(username)
