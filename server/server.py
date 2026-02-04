@@ -1,6 +1,4 @@
 #!/bin/python
-
-from random import randint
 import socket
 import threading
 
@@ -18,6 +16,7 @@ MAX_HISTORY_MESSAGES = 16                                               # Maxima
 
 ### end Configuration ###
 
+# Lists:
 users = []
 users_lock = threading.Lock()
 online_users = []
