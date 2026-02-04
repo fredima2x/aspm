@@ -2,7 +2,7 @@
 import socket
 import threading
 
-VERSION = "1.3.6"
+VERSION = "1.5.3"
 
 ### Configuration ###
 # Important:
@@ -42,7 +42,7 @@ def sendall(message, client_socket=None):
     global clients
     clients_to_remove = []
     for client in clients:
-        if client != client_socket:
+        if client[0] != client_socket:
             try:
                 client[0].sendall(message.encode())
             except (OSError, BrokenPipeError, ConnectionResetError):

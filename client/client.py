@@ -49,8 +49,6 @@ def receive_messages(client_socket):
         print(response.decode())
         print(f"{username}> ", end='', flush=True)
 
-def window_loop():
-    window.mainloop()
 
 def main():
     start_session()
