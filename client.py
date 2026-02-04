@@ -16,6 +16,11 @@ def connect_to_server(host, port):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
     client_socket.sendall(username.encode())
+
+    if client_socket.recv(1024).decode() == "get_password":
+        password = input("Geben Sie Ihr Password ein: ")
+        client_socket.sendall(password.encode())
+
     print("\n" + "-"*50)
     return client_socket
 
