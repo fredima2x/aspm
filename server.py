@@ -1,9 +1,10 @@
 #!/bin/python
 
+from random import randint
 import socket
 import threading
 
-VERSION = "1.2.5"
+VERSION = "1.3.4"
 
 ### Configuration ###
 
