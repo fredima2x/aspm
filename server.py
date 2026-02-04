@@ -7,11 +7,14 @@ import threading
 VERSION = "1.3.6"
 
 ### Configuration ###
+# Important:
+SERVER_PORT = 8080          # Standard Port: 8080
+VERIFIED_SERVER = True      # Wenn True, müssen sich Benutzer mit Passwort anmelden oder registrieren
 
-ANTI_SPAM_MESSAGE = "Bitte senden Sie keine doppelten Nachrichten."
-WELCOME_MESSAGE = f"Willkommen auf dem Server! (mcefli v{VERSION})"
-MAX_HISTORY_MESSAGES = 16
-VERIFIED_SERVER = True
+# Non-important:
+ANTI_SPAM_MESSAGE = "Bitte senden Sie keine doppelten Nachrichten."     # Hinweis bei Spam-Versuch
+WELCOME_MESSAGE = f"Willkommen auf dem Server! (mcefli v{VERSION})"     # Willkommensnachricht
+MAX_HISTORY_MESSAGES = 16                                               # Maximale Anzahl der Nachrichten, die beim Beitritt gesendet werden 
 
 ### end Configuration ###
 
@@ -140,7 +143,7 @@ def handle_client(client_socket, addr):
     client_socket.close()
 
 def main():
-    server_socket = init_server("localhost", 8080)
+    server_socket = init_server("localhost", SERVER_PORT)
     while True:
         client_socket, addr = server_socket.accept()
         client_handler = threading.Thread(target=handle_client, args=(client_socket, addr))
