@@ -2,7 +2,7 @@
 import socket
 import threading
 import logging
-import sqlite3
+import database
 
 VERSION = "1.6.0"
 
@@ -19,9 +19,6 @@ clients_lock = threading.Lock()
 def INIT():
     global logger
     logger = logging.getLogger(__name__)
-    data_connection = sqlite3.connect('messenger.db')
-    cursor = data_connection.cursor()
-
 
 def init_server(host, port):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
