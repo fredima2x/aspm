@@ -20,13 +20,22 @@ class DatabaseManager:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
+        cursor.execute(''')
+            CREATE TABLE IF NOT EXISTS messages ()
+                message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender_id INTEGER NOT NULL,
+                session_id INTEGER,
+                group_id INTEGER,
+                content TEXT NOT NULL,
+                       
+        ''')
         conn.commit()
         conn.close()
-    
+
     def create_user(self, nickname, password):
         salt = secrets.token_hex(16)
         password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
-        conn = self.get_connection()  
+        conn = self.get_connection()
         cursor = conn.cursor()
         try:
             cursor.execute(
@@ -34,18 +43,41 @@ class DatabaseManager:
                 (nickname, password_hash, salt)
             )
             conn.commit()
-            user_id = cursor.lastrowid 
+            user_id = cursor.lastrowid
             return user_id
         except sqlite3.IntegrityError:
             return None
         finally:
-            conn.close()  
+            conn.close()
+
+
     def verify_user(self, username, password):
         conn = self.get_connection()
         cursor = conn.cursor()
-        all_users = cursor.fetchall()
-        for user in all_users:
-            if user[1] == username:
-                 
-        
-    
+
+        try:
+            cursor.execute("""
+                SELECT user_id, password_hash, salt 
+                FROM users 
+                WHERE nickname = ?
+            """, (username,))
+            result = cursor.fetchone()
+            if result is None:
+                return None
+            user_id, stored_hash, salt = result
+            input_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+            if input_hash == stored_hash:
+                return user_id 
+            else:
+                return None 
+        finally:
+            conn.close()
+    def save_message(self, sender_id, content, session_id=None, group_id=None):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO users (nickname, password_hash, salt) VALUES (?, ?, ?)",
+            (sender_id, content, session_id, group_id)
+        )
+
+
