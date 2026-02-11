@@ -8,6 +8,8 @@ VERSION = "1.6.0"
 SERVER_PORT = 8080          # Standard Port: 8080
 
 # Lists:
+saves = []
+saves_lock = threading.Lock()
 sessions = []
 sessions_lock = threading.Lock()
 clients = []  
@@ -26,7 +28,8 @@ def init_server(host, port):
     return server_socket
 
 def handle_data(data, client_socket):
-    pass
+    message = data.decode()
+    if message == 
 
 def handle_client(client_socket, addr):
     global clients
