@@ -12,7 +12,6 @@ GUI_ENABLED = False
 messages_lock = threading.Lock()
 
 def start_session():
-    print("Client-Session gestartet.")
     print("Geben Sie 'quit' ein, um die Sitzung zu beenden.")
     global username
     username = input("Geben Sie Ihren Benutzernamen ein: ")

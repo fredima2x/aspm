@@ -1,6 +1,7 @@
 #!/bin/python
 import socket
 import threading
+import logging
 
 VERSION = "1.5.3"
 
@@ -29,12 +30,16 @@ clients_lock = threading.Lock()
 history = []
 history_lock = threading.Lock()
 
+def INIT():
+    global logger
+    logger = logging.getLogger(__name__)
+
 def init_server(host, port):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server_socket.bind((host, port))
     server_socket.listen()
-    print(f"Server lauscht auf {host}:{port}")
+    logger.info(f"Server lauscht auf {host}:{port}")
     return server_socket
 
 def sendall(message, client_socket=None):
@@ -53,7 +58,7 @@ def sendall(message, client_socket=None):
     for client in clients_to_remove:
         try:
             clients.remove(client)
-            print(f"Client {client[1]} wurde entfernt (Verbindung unterbrochen)")
+            logger.info(f"Client {client[1]} wurde entfernt (Verbindung unterbrochen)")
         except ValueError:
             pass
     clients_lock.release()
@@ -78,7 +83,7 @@ def handle_client(client_socket, addr):
     global clients_lock
     global users
     global users_lock
-    print(f"Verbindung von {addr} akzeptiert")
+    logger.info(f"Verbindung von {addr} akzeptiert")
     
     try:
         encodet_username = client_socket.recv(1024)
@@ -87,11 +92,11 @@ def handle_client(client_socket, addr):
             return
         username = encodet_username.decode()
     except OSError as e:
-        print(f"Fehler beim Empfangen vom Client {addr}: {e}")
+        logger.error(f"Fehler beim Empfangen vom Client {addr}: {e}")
         client_socket.close()
         return
     except Exception as e:
-        print(f"Unerwarteter Fehler beim Empfangen vom Client {addr}: {e}")
+        logger.error(f"Unerwarteter Fehler beim Empfangen vom Client {addr}: {e}")
         client_socket.close()
         return
 
@@ -150,10 +155,10 @@ def handle_client(client_socket, addr):
         try:
             data = client_socket.recv(1024)
         except OSError as e:
-            print(f"Socket-Fehler bei Client {addr}: {e}")
+            logger.error(f"Socket-Fehler bei Client {addr}: {e}")
             break
         except Exception as e:
-            print(f"Unerwarteter Fehler bei Client {addr}: {e}")
+            logger.error(f"Unerwarteter Fehler bei Client {addr}: {e}")
             break
             
         if not data:
@@ -167,44 +172,8 @@ def handle_client(client_socket, addr):
             continue
         else: 
             last_message = data
-        
-        # Check for commands starting with "/"
-        if data.decode().startswith("/"):
-            command = data.decode()[1:].split()[0]
-            if command == "online":
-                online_users_lock.acquire()
-                online_list = ", ".join(online_users)
-                online_users_lock.release()
-                client_socket.sendall(f"Online Benutzer: {online_list}".encode())
-                continue
-        # Check for Admin commands starting with "!"
-        if data.decode().startswith("!"):
-            command = data.decode()[1:].split()[0]
-            if IS_ADMIN:
-                if command == "kick":
-                    target_user = data.decode().split()[1]
-                    online_users_lock.acquire()
-                    if target_user in online_users:
-                        online_users_lock.release()
-                        clients_lock.acquire()
-                        for c in clients:
-                            if c[1] == target_user:
-                                c[0].sendall("Sie wurden vom Server gekickt.".encode())
-                                c[0].close()
-                                clients.remove(c)
-                                break
-                        clients_lock.release()
-                        sendall(f"\033[31m{target_user} wurde vom Server gekickt.\033[0m")       
-            else:
-                client_socket.sendall("Keine Berechtigung für Admin-Befehle.".encode())
-                continue
 
-        # Wenn ein username in der Nachricht erwähnt wird, wird der username eingefährbt in magenta gesendet, sonst in weiß
-        mentioned_users = [u for u in online_users if u in data.decode()]
-        if username in mentioned_users:
-            message = f"{username}: \033[35m{data.decode()}\033[0m"
-        else:
-            message = f"{username}: {data.decode()}"
+        message = f"{username}: {data.decode()}"
     
         print(f"[{addr}]: {message}")
         history_lock.acquire()
@@ -218,11 +187,12 @@ def handle_client(client_socket, addr):
     online_users_lock.acquire()
     online_users.remove(username)
     online_users_lock.release()
-    print(f"Verbindung von {addr} geschlossen!")
+    logger.info(f"Verbindung von {addr} geschlossen!")
     sendall(f"\033[36m{username} hat den Chat verlassen.\033[0m", client_socket)
     client_socket.close()
 
 def main():
+    INIT()
     server_socket = init_server("localhost", SERVER_PORT)
     while True:
         client_socket, addr = server_socket.accept()
