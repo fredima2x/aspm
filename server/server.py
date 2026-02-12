@@ -2,7 +2,7 @@
 import socket
 import threading
 import logging
-import database
+import DatabaseManager
 
 VERSION = "1.6.0"
 
