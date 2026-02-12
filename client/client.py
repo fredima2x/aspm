@@ -1,6 +1,7 @@
 #! /bin/python
 import socket
 import threading
+import time
 
 # Client configuration
 SERVER_HOST = "localhost"  # Server-Adresse (z.B. "localhost" oder "192.168.1.100")
@@ -20,7 +21,22 @@ def start_session():
 def connect_to_server(host, port):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
-    print("\n" + "-"*50)
+    
+    print("Delay...")
+    time.sleep(5)
+
+    #####
+    if input("Create new Account (y/n)? ") == "y":
+        sign_up = "send_newuser"
+    else:
+        sign_up = "send_creds"
+    username = input("Enter your username: ")
+    password = input("Enter your password: ")
+    #####
+
+    creds = [sign_up, username, password]
+    client_socket.sendall(creds.encode())
+
     return client_socket
 
 def send(client_socket):

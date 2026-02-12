@@ -48,7 +48,7 @@ def handle_client(client_socket, addr):
             break
 
         message = data.decode()
-        ready_message = message.split(";")
+        ready_message = message
 
         ### Block for unverified commands:
         if ready_message[0] == "send_creds":
