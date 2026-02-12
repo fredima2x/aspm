@@ -5,7 +5,8 @@ import logging
 
 class DatabaseManager:
     def __init__(self, db_path="messenger.db"):
-        self.logger = logging.Logger(__name__)
+        self.logger = logging.getLogger(__name__)
+        logging.basicConfig(level=logging.INFO) 
         self.db_path = db_path
         self._init_database()
     def get_connection(self):
@@ -19,18 +20,19 @@ class DatabaseManager:
                 nickname TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 salt TEXT NOT NULL,
-                properties TEXT NOT NULL,
+                properties TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        cursor.execute(''')
-            CREATE TABLE IF NOT EXISTS messages ()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS messages (
                 message_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sender_id INTEGER NOT NULL,
                 chat_id INTEGER,
                 content TEXT NOT NULL,
-                properties TEXT NOT NULL,
+                properties TEXT, 
                 send_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
         ''')
         conn.commit()
         conn.close()
@@ -47,20 +49,19 @@ class DatabaseManager:
             conn.commit()
             user_id = cursor.lastrowid
             return user_id
-        except sqlite3.IntegrityError:
-            self.logger.info("sqlite.IntegrityError: could not save user!")
+        except sqlite3.IntegrityError as e:
+            self.logger.info(f"sqlite.IntegrityError: could not save user! {e}")
+            return None  
         finally:
             conn.close()
     def verify_user(self, username, password):
         conn = self.get_connection()
         cursor = conn.cursor()
-
         try:
-            cursor.execute("""
-                SELECT user_id, password_hash, salt 
-                FROM users 
-                WHERE nickname = ?
-            """, (username))
+            cursor.execute(
+                "SELECT user_id, password_hash, salt FROM users WHERE nickname = ?",
+                (username,)
+            )
             result = cursor.fetchone()
             if result is None:
                 return None
@@ -81,8 +82,8 @@ class DatabaseManager:
                 (sender_id, chat_id, content, properties)
             )
             conn.commit()
-        except:
-            self.logger.critical("Failed to save message!")
+        except Exception as e:  
+            self.logger.critical(f"Failed to save message! Error: {e}")
         finally:
             conn.close()
     def load_messages(self, chat_id):
@@ -91,15 +92,15 @@ class DatabaseManager:
         try:
             cursor.execute(
                 "SELECT sender_id, content, properties FROM messages WHERE chat_id = ?",
-                (chat_id)
+                (chat_id,) 
             )
             result = cursor.fetchall()
-            if result is None:
-                self.logger.error("No Messages Found!")
-                return None
-        except:
-            self.logger.error("Coulnd load Messages!")
+            return result  
+        except Exception as e:  
+            self.logger.error(f"Could not load messages! Error: {e}")
+            return []
         finally:
             conn.close()
-        return result
-            
+
+
+

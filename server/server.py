@@ -2,17 +2,13 @@
 import socket
 import threading
 import logging
-import database
+import datasm
 
 VERSION = "1.6.0"
 
 SERVER_PORT = 8080          # Standard Port: 8080
 
 # Lists:
-saves = []
-saves_lock = threading.Lock()
-sessions = []
-sessions_lock = threading.Lock()
 clients = []  
 clients_lock = threading.Lock()  
 
@@ -28,19 +24,16 @@ def init_server(host, port):
     logger.info(f"Server lauscht auf {host}:{port}")
     return server_socket
 
-def handle_data(data, client_socket):
-    message = data.decode()
-
 def handle_client(client_socket, addr):
     global clients
     global clients_lock
     logger.info(f"Verbindung von {addr} akzeptiert")
-    
     clients_lock.acquire()
     clients.append(client_socket)
     clients_lock.release()
+    verified_user = False
+    db = datasm.DatabaseManager()
 
-    # Main loop
     while True:
         try:
             data = client_socket.recv(1024)
@@ -54,7 +47,22 @@ def handle_client(client_socket, addr):
         if not data:
             break
 
-        handle_data(data, client_socket)  
+        message = data.decode()
+        ready_message = message.split(";")
+
+        ### Block for unverified commands:
+        if ready_message[0] == "send_creds":
+            password = ready_message[1]
+            username = ready_message[2]
+            db.verify_user(username, password)
+        if ready_message[0] == "send_newuser"
+            password = ready_message[1]
+            username = ready_message[2]
+            db.create_user(username, password)
+
+        ### Block for verified commands:
+
+
 
     clients_lock.acquire()
     clients.remove(client_socket)
