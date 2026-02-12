@@ -12,13 +12,9 @@ GUI_ENABLED = False
 
 messages_lock = threading.Lock()
 
-def start_session():
-    print("Geben Sie 'quit' ein, um die Sitzung zu beenden.")
-    global username
-    username = input("Geben Sie Ihren Benutzernamen ein: ")
-    print(f"Willkommen, {username}!")
 
 def connect_to_server(host, port):
+    global username
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.connect((host, port))
     
@@ -35,8 +31,7 @@ def connect_to_server(host, port):
     #####
 
     creds = [sign_up, username, password]
-    client_socket.sendall(creds.encode())
-
+    client_socket.sendall(str(creds).encode())
     return client_socket
 
 def send(client_socket):
@@ -60,7 +55,6 @@ def receive_messages(client_socket):
 
 
 def main():
-    start_session()
     client_socket = connect_to_server(SERVER_HOST, SERVER_PORT)
     receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
     receive_thread.start()

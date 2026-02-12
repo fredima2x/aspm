@@ -14,6 +14,7 @@ clients_lock = threading.Lock()
 
 def INIT():
     global logger
+    logging.basicConfig(level="INFO")
     logger = logging.getLogger(__name__)
 
 def init_server(host, port):
@@ -48,30 +49,34 @@ def handle_client(client_socket, addr):
             break
 
         message = data.decode()
-        ready_message = message
+        ready_message = message.split
 
         ### Block for unverified commands:
         if ready_message[0] == "send_creds":
+            logger.info("Got send_creds Request!")
             password = ready_message[1]
             username = ready_message[2]
+            logger.debug(f"password: {password}, username: {username}")
             if username != None and password != None:
                 verify_status = db.verify_user(username, password)
                 if verify_status == None:
                     client_socket.sendall("invalid")
+                    print(f"Wrong Creds! {addr}")
                 else:
                     user_id = verify_status
                     verified_user = True
+                    print(f"Verified user {addr}!")
             else:
                 client_socket.sendall("invalid")
 
         if ready_message[0] == "send_newuser":
+            logger.info("Got send_newuser Request!")
             password = ready_message[1]
             username = ready_message[2]
             if username != None and password != None:
-                db.verify_user(username, password)
+                db.create_user(username, password)
             else:
                 client_socket.sendall("invalid_creds")
-            db.create_user(username, password)
 
         ### Block for verified commands:
         if verified_user:
