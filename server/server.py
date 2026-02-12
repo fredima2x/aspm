@@ -54,14 +54,28 @@ def handle_client(client_socket, addr):
         if ready_message[0] == "send_creds":
             password = ready_message[1]
             username = ready_message[2]
-            db.verify_user(username, password)
-        if ready_message[0] == "send_newuser"
+            if username != None and password != None:
+                verify_status = db.verify_user(username, password)
+                if verify_status == None:
+                    client_socket.sendall("invalid")
+                else:
+                    user_id = verify_status
+                    verified_user = True
+            else:
+                client_socket.sendall("invalid")
+
+        if ready_message[0] == "send_newuser":
             password = ready_message[1]
             username = ready_message[2]
+            if username != None and password != None:
+                db.verify_user(username, password)
+            else:
+                client_socket.sendall("invalid_creds")
             db.create_user(username, password)
 
         ### Block for verified commands:
-
+        if verified_user:
+            pass
 
 
     clients_lock.acquire()
@@ -72,7 +86,7 @@ def handle_client(client_socket, addr):
 
 def main():
     INIT()
-    server_socket = init_server("localhost", SERVER_PORT)
+    server_socket= init_server("localhost", SERVER_PORT)
     while True:
         client_socket, addr = server_socket.accept()
         client_handler = threading.Thread(target=handle_client, args=(client_socket, addr))
