@@ -28,6 +28,7 @@ def init_server(host, port):
 def handle_client(client_socket, addr):
     global clients
     global clients_lock
+    current_chat = None
     logger.info(f"Verbindung von {addr} akzeptiert")
     clients_lock.acquire()
     clients.append(client_socket)
@@ -49,7 +50,7 @@ def handle_client(client_socket, addr):
             break
 
         message = data.decode()
-        ready_message = message.split
+        ready_message = message.split(";")
 
         ### Block for unverified commands:
         if ready_message[0] == "send_creds":
@@ -60,7 +61,7 @@ def handle_client(client_socket, addr):
             if username != None and password != None:
                 verify_status = db.verify_user(username, password)
                 if verify_status == None:
-                    client_socket.sendall("invalid")
+                    client_socket.sendall("invalid".encode())
                     print(f"Wrong Creds! {addr}")
                 else:
                     user_id = verify_status
@@ -80,7 +81,13 @@ def handle_client(client_socket, addr):
 
         ### Block for verified commands:
         if verified_user:
-            pass
+            
+            if ready_message[0] == "send_message":
+                if current_chat == None:
+                    client_socket.sendall("get_chat")
+                else:
+                    db.save_message(user_id, current_chat, ready_message[1], ready_message[2])
+    
 
 
     clients_lock.acquire()

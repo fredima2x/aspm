@@ -30,8 +30,10 @@ def connect_to_server(host, port):
     password = input("Enter your password: ")
     #####
 
-    creds = [sign_up, username, password]
+    creds = f"{sign_up};{username};{password}"
+
     client_socket.sendall(str(creds).encode())
+    
     return client_socket
 
 def send(client_socket):
