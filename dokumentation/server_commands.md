@@ -19,3 +19,9 @@ send_creds;{username};{password}
 **Response:** None
 **Description:**
 Der Befehl dient dazu den Clienten beim Server (intern) zu verifizieren, und ihm zugriff auf weitere Befehle (unteranderem das senden von nachichten) zu geben die nur ein verifizierter, mit der datenbank abgeglichener, Client ausführen darf.
+### send_newuser (indev)
+**Syntax:**
+send_creds;{username};{password}
+**Response:** None
+**Description:**
+Dieser Befehl wird genutzt um einen neuen user in den Serverdatenbanken anzulegen (Mit den credentials username und password). WICHTIG: Dieser Befehl legt ausschließlich einen User an, tut diesen aber nicht verifizieren. 

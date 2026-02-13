@@ -55,8 +55,8 @@ def handle_client(client_socket, addr):
         ### Block for unverified commands:
         if ready_message[0] == "send_creds":
             logger.info("Got send_creds Request!")
-            password = ready_message[1]
-            username = ready_message[2]
+            username = ready_message[1]
+            password = ready_message[2]
             logger.debug(f"password: {password}, username: {username}")
             if username != None and password != None:
                 verify_status = db.verify_user(username, password)
@@ -72,8 +72,8 @@ def handle_client(client_socket, addr):
 
         if ready_message[0] == "send_newuser":
             logger.info("Got send_newuser Request!")
-            password = ready_message[1]
-            username = ready_message[2]
+            username = ready_message[1]
+            password = ready_message[2]
             if username != None and password != None:
                 db.create_user(username, password)
             else:

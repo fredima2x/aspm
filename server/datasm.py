@@ -19,7 +19,7 @@ class DatabaseManager:
                 user_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nickname TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
-                salt TEXT NOT NULL,
+                salt TEXT NOT NULL, 
                 properties TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -32,6 +32,15 @@ class DatabaseManager:
                 content TEXT NOT NULL,
                 properties TEXT, 
                 send_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS chats (
+                chat_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                creator_id INTEGER NOT NULL,
+                members TEXT,
+                properties TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         conn.commit()
@@ -101,6 +110,32 @@ class DatabaseManager:
             return []
         finally:
             conn.close()
+    def new_chat(self, creator_id, properties=None):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "INSERT INTO chats (creator_id, properties) VALUES (?, ?)",
+                (creator_id, properties)
+            )
+            conn.commit()
+        except:
+            return None
+        finally:
+            conn.close()
 
+    def delete_chat(self, chat_id, run_user):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "DELETE FROM chats WHERE chat_id = ? AND creator_id = ?",
+                (chat_id, run_user)
+            )
+        except
+
+
+    def add_to_chat(self, chat_id, user_id):
+        pass
 
 
