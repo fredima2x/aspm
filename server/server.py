@@ -88,9 +88,10 @@ def handle_client(client_socket, addr):
         if verified_user:
             if ready_message[0] == "get_chats":
                 chats = db.get_user_chats(user_id)
-                logger.info(f"User {addr} requested chat list, sending {len(chats)} chats")
+                logger.debug(f"get_user_chats returned {chats}")
+                logger.debug(f"User {addr} requested chat list, sending {len(chats)} chats")
                 if chats is not None and len(chats) > 0:
-                    chats_string = ";".join([f"{chat[0]}:{chat[1]}" for chat in chats])
+                    chats_string = ";".join([f"{chat['chat_id']}:{chat['properties']}" for chat in chats])
                     client_socket.sendall(chats_string.encode())
                     logger.debug(f"Sent chat list to {addr}: {chats_string}")
                 else:
@@ -121,13 +122,10 @@ def handle_client(client_socket, addr):
             if ready_message[0] == "new_chat":
                 logger.debug(f"User {addr} requested new chat creation with name '{ready_message[1]}'")
                 chat_name = ready_message[1]
-                chat_id = db.new_chat(
-                    user_id,
-                    '''{"chat_name": "''' + chat_name + '''"}'''
-                )
+                chat_id = db.new_chat(user_id)
                 if chat_id is not None:
                     client_socket.sendall(f"chat_created".encode())
-                    logger.debug(f"Chat '{chat_name}' mit ID {chat_id} erfolgreich für {addr} erstellt")
+                    logger.debug(f"Chat '{chat_name}' mit ID {chat_id} erfolgreich für UserID: {user_id} erstellt")
                 else:
                     client_socket.sendall("chat_creation_failed".encode())
                     logger.error(f"Fehler bei der Erstellung des Chats '{chat_name}' für {addr}")
