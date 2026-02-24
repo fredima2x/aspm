@@ -11,6 +11,8 @@ SERVER_PORT = 8080          # Standard Port: 8080
 # Lists:
 clients = []  
 clients_lock = threading.Lock()  
+clients_data = {}  # Dictionary to store client-specific data, e.g., user_id
+clients_data_lock = threading.Lock()  # Lock for synchronizing access to clients_data
 
 def INIT():
     global logger
@@ -67,9 +69,12 @@ def handle_client(client_socket, addr):
                     user_id = verify_status
                     verified_user = True
                     print(f"Verified user {addr}!")
+                    clients_data_lock.acquire()
+                    clients_data[client_socket] = {"user_id": user_id}
+                    clients_data_lock.release()
+                    client_socket.sendall("verified".encode())
             else:
                 client_socket.sendall("invalid")
-
         if ready_message[0] == "send_newuser":
             logger.info("Got send_newuser Request!")
             username = ready_message[1]
@@ -81,17 +86,38 @@ def handle_client(client_socket, addr):
 
         ### Block for verified commands:
         if verified_user:
-            
+            if ready_message[0] == "get_chats":
+                chats = db.get_user_chats(user_id)
+                chats_string = ";".join([f"{chat[0]}:{chat[1]}" for chat in chats])
+                client_socket.sendall(chats_string.encode())
+            if ready_message[0] == "get_messages":
+                chat_id = ready_message[1]
+                messages = db.load_messages(chat_id)
+                messages_string = ";".join([f"{message[0]}:{message[1]}" for message in messages])
+                client_socket.sendall(messages_string.encode())
             if ready_message[0] == "send_message":
-                if current_chat == None:
-                    client_socket.sendall("get_chat")
-                else:
-                    db.save_message(user_id, current_chat, ready_message[1], ready_message[2])
-    
-
+                chat_id = ready_message[1]
+                message_content = ready_message[2]
+                db.save_message(chat_id, user_id, message_content)
+                members = db.get_chat_members(chat_id)
+                for member in members
+                    clients_data_lock.acquire()
+                    for sock, data in clients_data.items():
+                        if data["user_id"] == member_id:
+                            try:
+                                sock.sendall(f"new_message;{chat_id}".encode())
+                            except Exception as e:
+                                logger.error(f"Fehler beim Senden der Nachricht an {sock.getpeername()}: {e}")
+                    clients_data_lock.release()
+                
+                    
 
     clients_lock.acquire()
     clients.remove(client_socket)
+    clients_data_lock.acquire()
+    if client_socket in clients_data:
+        del clients_data[client_socket]
+    clients_data_lock.release()
     clients_lock.release() 
     logger.info(f"Verbindung von {addr} geschlossen!")
     client_socket.close()
