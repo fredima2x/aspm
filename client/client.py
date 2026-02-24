@@ -10,9 +10,6 @@ SERVER_PORT = 8080         # Server-Port (muss mit dem Server übereinstimmen)
 # DEBUG: DONT CHANGE THIS
 GUI_ENABLED = False
 
-messages_lock = threading.Lock()
-
-
 def connect_to_server(host, port):
     global username
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -36,31 +33,41 @@ def connect_to_server(host, port):
     
     return client_socket
 
-def send(client_socket):
+def prompt(client_socket):
     while True:
-        inputs = input()
-        message = inputs
-        if inputs.lower() == 'quit':
-            client_socket.close()
+        user_input = input("Enter command: ")
+        if user_input == "exit":
+            print("Exiting...")
             break
-        client_socket.sendall(message.encode())
-        print(f"{username}> ", end='', flush=True)
-
-def receive_messages(client_socket):
-    while True:
-        response = client_socket.recv(1024)
-        if not response:
-            break
-        print("\r" + " " * 80 + "\r", end='')
-        print(response.decode())
-        print(f"{username}> ", end='', flush=True)
+        if user_input == "help":
+            print("Available commands: exit, help, list_chats")
+            continue
+        if user_input == "list_chats":
+            print("Listing chats...")
+            client_socket.sendall("get_chats".encode())
+            chats = client_socket.recv(1024).decode().split(";")
+            print("Chats:")
+            for chat in chats:
+                print(f"- {chat}")
+            continue
+        if user_input.startswith("new_chat"):
+            input_parts = user_input.split(" ")
+            name = input_parts[1]
+            print("Creating new chat...")
+            client_socket.sendall(f"new_chat;{name}".encode())
+            print("Delay...")
+            time.sleep(1)
+            response = client_socket.recv(1024).decode()
+            if response.startswith("chat_created"):
+                print("Chat created successfully!")
+            else:
+                print("Failed to create chat.")    
+            continue
 
 
 def main():
     client_socket = connect_to_server(SERVER_HOST, SERVER_PORT)
-    receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
-    receive_thread.start()
-    send(client_socket)
+    prompt(client_socket)
 
 if __name__ == "__main__":
     main()    

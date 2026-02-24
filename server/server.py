@@ -16,7 +16,7 @@ clients_data_lock = threading.Lock()  # Lock for synchronizing access to clients
 
 def INIT():
     global logger
-    logging.basicConfig(level="INFO")
+    logging.basicConfig(level="DEBUG", format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
 
 def init_server(host, port):
@@ -88,8 +88,14 @@ def handle_client(client_socket, addr):
         if verified_user:
             if ready_message[0] == "get_chats":
                 chats = db.get_user_chats(user_id)
-                chats_string = ";".join([f"{chat[0]}:{chat[1]}" for chat in chats])
-                client_socket.sendall(chats_string.encode())
+                logger.info(f"User {addr} requested chat list, sending {len(chats)} chats")
+                if chats is not None and len(chats) > 0:
+                    chats_string = ";".join([f"{chat[0]}:{chat[1]}" for chat in chats])
+                    client_socket.sendall(chats_string.encode())
+                    logger.debug(f"Sent chat list to {addr}: {chats_string}")
+                else:
+                    client_socket.sendall("None".encode())
+                    logger.debug(f"No chats found for user {addr}, sent 'None'")
             if ready_message[0] == "get_messages":
                 chat_id = ready_message[1]
                 messages = db.load_messages(chat_id)
@@ -100,15 +106,31 @@ def handle_client(client_socket, addr):
                 message_content = ready_message[2]
                 db.save_message(chat_id, user_id, message_content)
                 members = db.get_chat_members(chat_id)
-                for member in members
-                    clients_data_lock.acquire()
-                    for sock, data in clients_data.items():
-                        if data["user_id"] == member_id:
-                            try:
-                                sock.sendall(f"new_message;{chat_id}".encode())
-                            except Exception as e:
-                                logger.error(f"Fehler beim Senden der Nachricht an {sock.getpeername()}: {e}")
-                    clients_data_lock.release()
+                if members != None:
+                    for member in members:
+                        clients_data_lock.acquire()
+                        for sock, data in clients_data.items():
+                            if data["user_id"] == member[0] and sock != client_socket:
+                                try:
+                                    sock.sendall(f"new_message;{chat_id}".encode())
+                                except Exception as e:
+                                    logger.error(f"Fehler beim Senden der Nachricht an {sock.getpeername()}: {e}")
+                        clients_data_lock.release()
+                else:
+                    logger.error(f"Chat {chat_id} nicht gefunden für Nachricht von {addr}")
+            if ready_message[0] == "new_chat":
+                logger.debug(f"User {addr} requested new chat creation with name '{ready_message[1]}'")
+                chat_name = ready_message[1]
+                chat_id = db.new_chat(
+                    user_id,
+                    '''{"chat_name": "''' + chat_name + '''"}'''
+                )
+                if chat_id is not None:
+                    client_socket.sendall(f"chat_created".encode())
+                    logger.debug(f"Chat '{chat_name}' mit ID {chat_id} erfolgreich für {addr} erstellt")
+                else:
+                    client_socket.sendall("chat_creation_failed".encode())
+                    logger.error(f"Fehler bei der Erstellung des Chats '{chat_name}' für {addr}")
                 
                     
 
