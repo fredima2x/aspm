@@ -16,7 +16,7 @@ def connect_to_server(host, port):
     client_socket.connect((host, port))
     
     print("Delay...")
-    time.sleep(5)
+    time.sleep(1)
 
     #####
     if input("Create new Account (y/n)? ") == "y":

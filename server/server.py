@@ -91,7 +91,7 @@ def handle_client(client_socket, addr):
                 logger.debug(f"get_user_chats returned {chats}")
                 logger.debug(f"User {addr} requested chat list, sending {len(chats)} chats")
                 if chats is not None and len(chats) > 0:
-                    chats_string = ";".join([f"{chat['chat_id']}:{chat['properties']}" for chat in chats])
+                    chats_string = 
                     client_socket.sendall(chats_string.encode())
                     logger.debug(f"Sent chat list to {addr}: {chats_string}")
                 else:
@@ -126,6 +126,11 @@ def handle_client(client_socket, addr):
                 if chat_id is not None:
                     client_socket.sendall(f"chat_created".encode())
                     logger.debug(f"Chat '{chat_name}' mit ID {chat_id} erfolgreich für UserID: {user_id} erstellt")
+                    stat = db.add_to_chat(chat_id, user_id)
+                    if stat == True:
+                        logger.debug(f"UserID: {user_id} erfolgreich zum Chat '{chat_name}' hinzugefügt")
+                    else:
+                        logger.error(f"Fehler beim Hinzufügen von UserID: {user_id} zum Chat '{chat_name}'")
                 else:
                     client_socket.sendall("chat_creation_failed".encode())
                     logger.error(f"Fehler bei der Erstellung des Chats '{chat_name}' für {addr}")
