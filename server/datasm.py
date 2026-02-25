@@ -180,6 +180,13 @@ class DatabaseManager:
             conn.rollback()
             conn.close()
             return False
+    def add_user_to_chat_by_username(self, chat_id, username):
+        """Add user to chat by username"""
+        user = self.get_user_by_nickname(username)
+        if user is None:
+            self.logger.error(f"ADD_USER_TO_CHAT_BY_USERNAME: User {username} nicht gefunden")
+            return False
+        return self.add_to_chat(chat_id, user['user_id'])
     def get_user_chats(self, user_id):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -265,6 +272,13 @@ class DatabaseManager:
             return False
         finally:
             conn.close()
+    def remove_user_from_chat_by_username(self, chat_id, username):
+        """Remove user from chat by username"""
+        user = self.get_user_by_nickname(username)
+        if user is None:
+            self.logger.error(f"REMOVE_USER_FROM_CHAT_BY_USERNAME: User {username} nicht gefunden")
+            return False
+        return self.remove_from_chat(chat_id, user['user_id'])
     def get_user_by_id(self, user_id):
         conn = self.get_connection()
         cursor = conn.cursor()

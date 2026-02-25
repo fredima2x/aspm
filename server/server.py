@@ -108,6 +108,40 @@ def handle_client(client_socket, addr):
                 else:
                     client_socket.sendall("None".encode())
                     logger.debug(f"No chats found for user {addr}, sent 'None'")
+            if ready_message[0] == "add_user_to_chat":
+                chat_id = int(ready_message[1])
+                identifier = ready_message[2]  # Can be username or user_id
+                try:
+                    # Try to interpret as user_id first
+                    user_id = int(identifier)
+                    success = db.add_to_chat(chat_id, user_id)
+                except ValueError:
+                    # It's a username
+                    success = db.add_user_to_chat_by_username(chat_id, identifier)
+                
+                if success:
+                    client_socket.sendall(f"user_added".encode())
+                    logger.info(f"User {identifier} added to chat {chat_id}")
+                else:
+                    client_socket.sendall(f"add_user_failed".encode())
+                    logger.error(f"Failed to add user {identifier} to chat {chat_id}")
+            if ready_message[0] == "remove_user_from_chat":
+                chat_id = int(ready_message[1])
+                identifier = ready_message[2]  # Can be username or user_id
+                try:
+                    # Try to interpret as user_id first
+                    user_id = int(identifier)
+                    success = db.remove_from_chat(chat_id, user_id)
+                except ValueError:
+                    # It's a username
+                    success = db.remove_user_from_chat_by_username(chat_id, identifier)
+                
+                if success:
+                    client_socket.sendall(f"user_removed".encode())
+                    logger.info(f"User {identifier} removed from chat {chat_id}")
+                else:
+                    client_socket.sendall(f"remove_user_failed".encode())
+                    logger.error(f"Failed to remove user {identifier} from chat {chat_id}")
             if ready_message[0] == "get_messages":
                 chat_id = int(ready_message[1])
                 messages = db.get_messages(chat_id)
@@ -124,21 +158,12 @@ def handle_client(client_socket, addr):
             if ready_message[0] == "send_message":
                 chat_id = int(ready_message[1])
                 message_content = ready_message[2]
-                db.save_message(user_id, chat_id, message_content)
-                client_socket.sendall("message_saved".encode())
-                members = db.get_chat_members(chat_id)
-                if members != None:
-                    for member in members:
-                        clients_data_lock.acquire()
-                        for sock, data in clients_data.items():
-                            if data["user_id"] == member and sock != client_socket:
-                                try:
-                                    sock.sendall(f"new_message;{chat_id}".encode())
-                                except Exception as e:
-                                    logger.error(f"Fehler beim Senden der Nachricht an {sock.getpeername()}: {e}")
-                        clients_data_lock.release()
-                else:
-                    logger.error(f"Chat {chat_id} nicht gefunden für Nachricht von {addr}")
+                try:
+                    db.save_message(user_id, chat_id, message_content)
+                    client_socket.sendall("message_saved".encode())
+                except Exception as e:
+                    logger.error(f"Fehler beim Speichern der Nachricht: {e}")
+                    client_socket.sendall("message_save_failed".encode())
             if ready_message[0] == "new_chat":
                 logger.debug(f"User {addr} requested new chat creation with name '{ready_message[1]}'")
                 chat_name = ready_message[1]

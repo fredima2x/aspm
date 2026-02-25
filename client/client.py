@@ -53,7 +53,7 @@ def prompt(client_socket):
             print("Exiting...")
             break
         if user_input == "help":
-            print("Available commands: exit, help, list_chats, new_chat <name>, select_chat <id>, send_msg <message>, view_messages")
+            print("Available commands: exit, help, list_chats, new_chat <name>, select_chat <id>, send_msg <message>, view_messages, add_user <id/username>, remove_user <id/username>")
             continue
         if user_input == "list_chats":
             print("Listing chats...")
@@ -118,6 +118,34 @@ def prompt(client_socket):
             response = client_socket.recv(4096).decode()
             print("Messages in this chat:")
             print(response)
+        if user_input.startswith("add_user"):
+            if current_chat_id is None:
+                print("Please select a chat first using 'select_chat <id>'")
+                continue
+            input_parts = user_input.split(" ", 1)
+            if len(input_parts) < 2:
+                print("Usage: add_user <username or user_id>")
+                continue
+            identifier = input_parts[1]
+            client_socket.sendall(f"add_user_to_chat;{current_chat_id};{identifier}".encode())
+            time.sleep(0.5)
+            response = client_socket.recv(1024).decode()
+            print(f"Server response: {response}")
+            continue
+        if user_input.startswith("remove_user"):
+            if current_chat_id is None:
+                print("Please select a chat first using 'select_chat <id>'")
+                continue
+            input_parts = user_input.split(" ", 1)
+            if len(input_parts) < 2:
+                print("Usage: remove_user <username or user_id>")
+                continue
+            identifier = input_parts[1]
+            client_socket.sendall(f"remove_user_from_chat;{current_chat_id};{identifier}".encode())
+            time.sleep(0.5)
+            response = client_socket.recv(1024).decode()
+            print(f"Server response: {response}")
+            continue
 
 
 def main():
