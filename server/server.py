@@ -3,6 +3,7 @@ import socket
 import threading
 import logging
 import datasm
+import json as js
 
 VERSION = "1.6.0"
 
@@ -80,9 +81,18 @@ def handle_client(client_socket, addr):
             username = ready_message[1]
             password = ready_message[2]
             if username != None and password != None:
-                db.create_user(username, password)
+                user_id = db.create_user(username, password)
+                if user_id:
+                    verified_user = True
+                    clients_data_lock.acquire()
+                    clients_data[client_socket] = {"user_id": user_id}
+                    clients_data_lock.release()
+                    client_socket.sendall("verified".encode())
+                    logger.info(f"New user {username} created and verified")
+                else:
+                    client_socket.sendall("invalid_creds".encode())
             else:
-                client_socket.sendall("invalid_creds")
+                client_socket.sendall("invalid_creds".encode())
 
         ### Block for verified commands:
         if verified_user:
@@ -91,27 +101,37 @@ def handle_client(client_socket, addr):
                 logger.debug(f"get_user_chats returned {chats}")
                 logger.debug(f"User {addr} requested chat list, sending {len(chats)} chats")
                 if chats is not None and len(chats) > 0:
-                    chats_string = 
+                    json_string = js.dumps(chats)
+                    chats_string = f"send_chats;{json_string}"
                     client_socket.sendall(chats_string.encode())
                     logger.debug(f"Sent chat list to {addr}: {chats_string}")
                 else:
                     client_socket.sendall("None".encode())
                     logger.debug(f"No chats found for user {addr}, sent 'None'")
             if ready_message[0] == "get_messages":
-                chat_id = ready_message[1]
-                messages = db.load_messages(chat_id)
-                messages_string = ";".join([f"{message[0]}:{message[1]}" for message in messages])
+                chat_id = int(ready_message[1])
+                messages = db.get_messages(chat_id)
+                if messages:
+                    messages_list = []
+                    for msg in messages:
+                        sender_username = db.get_user_by_id(msg['sender_id'])
+                        sender_name = sender_username['nickname'] if sender_username else "Unknown"
+                        messages_list.append(f"[{msg['send_at']}] {sender_name}: {msg['content']}")
+                    messages_string = "\n".join(messages_list)
+                else:
+                    messages_string = "No messages in this chat yet."
                 client_socket.sendall(messages_string.encode())
             if ready_message[0] == "send_message":
-                chat_id = ready_message[1]
+                chat_id = int(ready_message[1])
                 message_content = ready_message[2]
-                db.save_message(chat_id, user_id, message_content)
+                db.save_message(user_id, chat_id, message_content)
+                client_socket.sendall("message_saved".encode())
                 members = db.get_chat_members(chat_id)
                 if members != None:
                     for member in members:
                         clients_data_lock.acquire()
                         for sock, data in clients_data.items():
-                            if data["user_id"] == member[0] and sock != client_socket:
+                            if data["user_id"] == member and sock != client_socket:
                                 try:
                                     sock.sendall(f"new_message;{chat_id}".encode())
                                 except Exception as e:
@@ -124,13 +144,9 @@ def handle_client(client_socket, addr):
                 chat_name = ready_message[1]
                 chat_id = db.new_chat(user_id)
                 if chat_id is not None:
-                    client_socket.sendall(f"chat_created".encode())
                     logger.debug(f"Chat '{chat_name}' mit ID {chat_id} erfolgreich für UserID: {user_id} erstellt")
-                    stat = db.add_to_chat(chat_id, user_id)
-                    if stat == True:
-                        logger.debug(f"UserID: {user_id} erfolgreich zum Chat '{chat_name}' hinzugefügt")
-                    else:
-                        logger.error(f"Fehler beim Hinzufügen von UserID: {user_id} zum Chat '{chat_name}'")
+                    client_socket.sendall(f"chat_created;{chat_id}".encode())
+                    logger.debug(f"UserID: {user_id} erfolgreich zum Chat '{chat_name}' hinzugefügt")
                 else:
                     client_socket.sendall("chat_creation_failed".encode())
                     logger.error(f"Fehler bei der Erstellung des Chats '{chat_name}' für {addr}")

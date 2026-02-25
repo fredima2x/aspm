@@ -130,9 +130,10 @@ class DatabaseManager:
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
+            members_json = json.dumps([creator_id])
             cursor.execute(
-                "INSERT INTO chats (creator_id, properties) VALUES (?, ?)",
-                (creator_id, properties)
+                "INSERT INTO chats (creator_id, members, properties) VALUES (?, ?, ?)",
+                (creator_id, members_json, properties)
             )
             conn.commit()
             chat_id = cursor.lastrowid 
@@ -190,16 +191,19 @@ class DatabaseManager:
             user_chats = []
             for chat in all_chats:
                 chat_id, creator_id, members_json, properties, created_at = chat
+                members = []
                 if members_json:
                     members = json.loads(members_json)
-                    if user_id in members or creator_id == user_id:
-                        user_chats.append({
-                            'chat_id': chat_id,
-                            'creator_id': creator_id,
-                            'members': members,
-                            'properties': properties,
-                            'created_at': created_at
-                        })
+                else:
+                    members = [creator_id]
+                if user_id in members:
+                    user_chats.append({
+                        'chat_id': chat_id,
+                        'creator_id': creator_id,
+                        'members': members,
+                        'properties': properties,
+                        'created_at': created_at
+                    })
             return user_chats
         except Exception as e:
             self.logger.error(f"GET_USER_CHATS: Fehler - {str(e)}")
