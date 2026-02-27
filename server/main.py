@@ -144,17 +144,12 @@ def handle_client(client_socket, addr):
                     logger.error(f"Failed to remove user {identifier} from chat {chat_id}")
             if ready_message[0] == "get_messages":
                 chat_id = int(ready_message[1])
-                messages = db.get_messages(chat_id)
-                if messages:
-                    messages_list = []
-                    for msg in messages:
-                        sender_username = db.get_user_by_id(msg['sender_id'])
-                        sender_name = sender_username['nickname'] if sender_username else "Unknown"
-                        messages_list.append(f"[{msg['send_at']}] {sender_name}: {msg['content']}")
-                    messages_string = "\n".join(messages_list)
-                else:
-                    messages_string = "No messages in this chat yet."
-                client_socket.sendall(messages_string.encode())
+                limit = int(ready_message[2])
+                offset = int(ready_message[3])
+                messages = db.get_messages(chat_id, limit, offset)
+                json_messages = js.dump(messages)
+                client_socket.sendall(str(json_messages))
+
             if ready_message[0] == "send_message":
                 chat_id = int(ready_message[1])
                 message_content = ready_message[2]
