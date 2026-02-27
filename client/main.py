@@ -164,11 +164,56 @@ class ServerConnection:
         except Exception as e:
             logger.error(f"Error removing user from chat: {e}")
             return None
-
     
 def main():
     conn = ServerConnection(SERVER_HOST, SERVER_PORT)
-
+    if GUI_ENABLED:
+        logger.info("GUI mode is enabled, but GUI implementation is not provided in this code snippet.")
+        # Here you would initialize and run your GUI, passing the ServerConnection instance to it.
+    else:
+        logger.info("Running in CLI mode. You can implement CLI interactions here.")
+        # Example CLI interaction (you can expand this as needed):
+        while True:
+            command = input("Enter command >>> ").strip().lower()
+            if command == "list":
+                chats = conn.group_list()
+                print(chats)
+            elif command == "signup":
+                username = input("Enter username: ")
+                password = input("Enter password: ")
+                response = conn.verify_credentials(username, password, sign_up=True)
+                print(response)
+            elif command == "login":
+                username = input("Enter username: ")
+                password = input("Enter password: ")
+                response = conn.verify_credentials(username, password, sign_up=False)
+                print(response)
+            elif command == "create":
+                name = input("Enter chat name: ")
+                conn.group_create(name)
+            elif command == "send":
+                chat_id = input("Enter chat ID: ")
+                message = input("Enter message content: ")
+                conn.message_new(chat_id, message)
+            elif command == "get":
+                chat_id = input("Enter chat ID: ")
+                messages = conn.message_getall(chat_id)
+                print(messages)
+            elif command == "adduser":
+                chat_id = input("Enter chat ID: ")
+                user = input("Enter user identifier to add: ")
+                conn.group_useradd(chat_id, user)
+            elif command == "rmuser":
+                chat_id = input("Enter chat ID: ")
+                user = input("Enter user identifier to remove: ")
+                conn.group_userrm(chat_id, user)
+            elif command == "help":
+                logger.info("Available commands: list, create, send, get, adduser, rmuser, quit")
+            elif command == "quit":
+                logger.info("Exiting client.")
+                break
+            else:
+                logger.warning("Unknown command. Please try again.")
 
 if __name__ == "__main__":
     main()
