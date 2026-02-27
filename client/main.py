@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 logger = logging.getLogger(__name__)
 
 # Client configuration
-SERVER_HOST = "localhost"  # Server-Adresse (z.B. "localhost" oder "192.168.1.100")
+SERVER_HOST = "127.0.0.1"  # Server-Adresse (z.B. "localhost" oder "192.168.1.100")
 SERVER_PORT = 8080         # Server-Port (muss mit dem Server übereinstimmen)
 
 # DEBUG: DONT CHANGE THIS
