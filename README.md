@@ -6,6 +6,7 @@ Das Projekt befindet sich in aktiver Entwicklung und dient als Grundlage für ei
 ---
 ## Credits
 
-- **Entwicklung:** aspm Team  
-- **Idee & Konzept:** aspm  
+- **Entwicklung:** @fredima2x, @hi_anton
+- **Idee & Konzept:** @hi_anton
 - **Dank an:** Alle, die Feedback geben, testen oder zum Projekt beitragen ❤️
+
