@@ -2,12 +2,17 @@
 import socket
 import threading
 import logging
-import json as js
 import messagesm
+import ssl
 
 VERSION = "1.8.2"
 
 SERVER_PORT = 8080          # Standard Port: 8080
+
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+context.load_cert_chain('cert.pem', 'key.pem')
+
+
 
 # Lists:
 clients = []  
@@ -21,12 +26,12 @@ def INIT():
     logger = logging.getLogger(__name__)
 
 def init_server(host, port):
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind((host, port))
-    server_socket.listen()
+    raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    raw_sock.bind((host, port))
+    raw_sock.listen(5)
     logger.info(f"Server lauscht auf {host}:{port}")
-    return server_socket
+    server_sock = context.wrap_socket(raw_sock, server_side=True)
+    return server_sock
 
 def main():
     INIT()

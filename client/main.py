@@ -1,9 +1,9 @@
 #! /bin/python
 import socket
-import threading
 import time
 import json as js
 import logging
+import ssl
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -25,7 +25,10 @@ class ServerConnection:
     
     def connect(self):
         try:
-            self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            self.context.load_verify_locations('cert.pem')
+            self.raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.socket = self.context.wrap_socket(self.raw_sock, server_hostname=self.host)
             self.socket.connect((self.host, self.port))
             logger.info(f"Connected to server at {self.host}:{self.port}")
         except ConnectionRefusedError:
