@@ -11,6 +11,8 @@ SERVER_HOST = "127.0.0.1"
 SERVER_PORT = 8080
 CERT_PATH = os.path.expanduser('~/.aspm_cert.pem')
 
+GUI_ENABLED = False  # Set to True if you have a GUI implementation
+
 def INIT():
     global log
     logging.basicConfig(level="DEBUG", format='%(asctime)s - %(levelname)s - %(message)s')
