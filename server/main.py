@@ -9,11 +9,6 @@ import ssl
 import os
 import json
 
-
-VERSION = "1.10.2-beta2"
-
-SERVER_PORT = 8280          # Standard Port: 8080
-
 # Lists:
 clients = []  
 clients_lock = threading.Lock()  
@@ -40,7 +35,7 @@ def load_config(path='config.json'):
 
 def configurate_server():
     global ENCRYPTION_ENABLED, DNS_ENABLED, DNS_NAME, IP_ADDRESS, CERT_PATH, KEY_PATH, SERVER_PORT, VERSION, BIND_TO, CERT_SERVER_PORT
-    
+
     config = load_config()
     VERSION             = config['VERSION']
     SERVER_PORT         = config['SERVER_PORT']
@@ -51,7 +46,7 @@ def configurate_server():
     CERT_PATH           = config['CERT_PATH']
     KEY_PATH            = config['KEY_PATH']
     BIND_TO             = config['BIND_TO']
-    CERT_SERVER_PORT    = config('CERT_SERVER_PORT') 
+    CERT_SERVER_PORT    = config['CERT_SERVER_PORT']
 
 def certificate_matches_config():
     try:
