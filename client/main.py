@@ -10,7 +10,8 @@ import ssl
 # Client configuration
 SERVER_HOST = "fredima.de"  # IP-Adresse des Servers
 CERT_PATH = os.path.expanduser('~/.aspm_cert.pem')
-SERVER_PORT = 8080
+SERVER_PORT = 8280
+CERT_PORT = 8281
 GUI_ENABLED = False  # Set to True if you have a GUI implementation
 
 def INIT():
@@ -29,7 +30,7 @@ class ServerConnection:
     def connect(self):
         try:
             try:
-                fetch_certificate(SERVER_HOST, port=8281)  # Zertifikat einmalig vom Server holen
+                fetch_certificate(self.host, CERT_PORT)  # Zertifikat einmalig vom Server holen
             except Exception as e:
                 log.error(f"Failed to fetch certificate: {e}")
                 exit(1)
