@@ -1,23 +1,28 @@
 #! /bin/python
+import os
 import socket
 import time
 import json as js
 import logging
 import ssl
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
 # Client configuration
 SERVER_HOST = "127.0.0.1"  # Server-Adresse (z.B. "localhost" oder "192.168.1.100")
 SERVER_PORT = 8080         # Server-Port (muss mit dem Server übereinstimmen)
+CERT_PATH = os.path.expanduser('~/.aspm_cert.pem')
 
 # DEBUG: DONT CHANGE THIS
 GUI_ENABLED = False
 
+def INIT():
+    global log
+    logging.basicConfig(level="DEBUG", format='%(asctime)s - %(levelname)s - %(message)s')
+    log = logging.getLogger(__name__)
+    
+
 class ServerConnection:
     def __init__(self, host, port):
+        self.logger = logging.getLogger(__name__)
         self.host = host
         self.port = port
         self.socket = None
@@ -25,22 +30,27 @@ class ServerConnection:
     
     def connect(self):
         try:
+            try:
+                fetch_certificate(SERVER_HOST, port=8081)  # Zertifikat einmalig vom Server holen
+            except Exception as e:
+                log.error(f"Failed to fetch certificate: {e}")
+                exit(1)
             self.context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            self.context.load_verify_locations('cert.pem')
+            self.context.load_verify_locations(CERT_PATH)
             self.raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket = self.context.wrap_socket(self.raw_sock, server_hostname=self.host)
             self.socket.connect((self.host, self.port))
-            logger.info(f"Connected to server at {self.host}:{self.port}")
+            self.logger.info(f"Connected to server at {self.host}:{self.port}")
         except ConnectionRefusedError:
-            logger.error(f"Failed to connect to server at {self.host}:{self.port}")
+            self.logger.error(f"Failed to connect to server at {self.host}:{self.port}")
             raise
         except Exception as e:
-            logger.error(f"Connection error: {e}")
+            self.logger.error(f"Connection error: {e}")
             raise
     
     def verify_credentials(self, username, password, sign_up=False):
         if not username or not password:
-            logger.error("Username and password cannot be empty")
+            self.logger.error("Username and password cannot be empty")
             return None
         
         sign_up_command = "send_newuser" if sign_up else "send_creds"
@@ -50,52 +60,52 @@ class ServerConnection:
             response = self.socket.recv(1024).decode()
             return response
         except Exception as e:
-            logger.error(f"Error during credential verification: {e}")
+            self.logger.error(f"Error during credential verification: {e}")
             return None
     
     def group_list(self):
-        logger.info("Listing chats...")
+        self.logger.info("Listing chats...")
         try:
             self.socket.sendall("get_chats".encode())
             response = self.socket.recv(4096).decode()
             if response.startswith("send_chats;"):
                 chats_json = response[11:]  # Remove "send_chats;" prefix
                 chats = js.loads(chats_json)
-                logger.info(f"Retrieved {len(chats)} chats")
+                self.logger.info(f"Retrieved {len(chats)} chats")
                 return chats
             elif response == "None":
-                logger.info("No chats found.")
+                self.logger.info("No chats found.")
                 return []
             else:
-                logger.warning(f"Invalid Server Response: {response}")
+                self.logger.warning(f"Invalid Server Response: {response}")
                 return None
         except Exception as e:
-            logger.error(f"Error retrieving chat list: {e}")
+            self.logger.error(f"Error retrieving chat list: {e}")
             return None
     
     def group_create(self, name, properties="{}"):
         if not name:
-            logger.error("Chat name cannot be empty")
+            self.logger.error("Chat name cannot be empty")
             return False
         
-        logger.info(f"Creating new chat: {name}")
+        self.logger.info(f"Creating new chat: {name}")
         try:
             self.socket.sendall(f"new_chat;{name}".encode())
             time.sleep(0.1)
             response = self.socket.recv(1024).decode()
             if response.startswith("chat_created"):
-                logger.info("Chat created successfully!")
+                self.logger.info("Chat created successfully!")
                 return True
             else:
-                logger.error(f"Failed to create chat: {response}")
+                self.logger.error(f"Failed to create chat: {response}")
                 return False
         except Exception as e:
-            logger.error(f"Error creating chat: {e}")
+            self.logger.error(f"Error creating chat: {e}")
             return False
     
     def message_new(self, chat, message_content, properties="{}"):
         if not chat or not message_content:
-            logger.error("Chat ID and message content cannot be empty")
+            self.logger.error("Chat ID and message content cannot be empty")
             return None
         
         try:
@@ -103,17 +113,17 @@ class ServerConnection:
             time.sleep(0.1)
             response = self.socket.recv(1024).decode()
             if response == "message_saved":
-                logger.info("Message sent successfully")
+                self.logger.info("Message sent successfully")
             else:
-                logger.warning(f"Server response: {response}")
+                self.logger.warning(f"Server response: {response}")
             return response
         except Exception as e:
-            logger.error(f"Error sending message: {e}")
+            self.logger.error(f"Error sending message: {e}")
             return None
     
     def message_getall(self, chat, limit=100, offset=0):
         if not chat:
-            logger.error("Chat ID cannot be empty")
+            self.logger.error("Chat ID cannot be empty")
             return None
         
         try:
@@ -123,18 +133,18 @@ class ServerConnection:
             if response.startswith("messages;"):
                 json_response = response[9:]  # Remove "messages;" prefix
                 messages = js.loads(json_response)
-                logger.info(f"Retrieved {len(messages) if messages else 0} messages")
+                self.logger.info(f"Retrieved {len(messages) if messages else 0} messages")
                 return messages
             else:
-                logger.warning(f"Invalid server response: {response}")
+                self.logger.warning(f"Invalid server response: {response}")
                 return None
         except Exception as e:
-            logger.error(f"Error retrieving messages: {e}")
+            self.logger.error(f"Error retrieving messages: {e}")
             return None
     
     def group_useradd(self, chat, user):
         if not chat or not user:
-            logger.error("Chat ID and user identifier cannot be empty")
+            self.logger.error("Chat ID and user identifier cannot be empty")
             return None
         
         try:
@@ -142,17 +152,17 @@ class ServerConnection:
             time.sleep(0.1)
             response = self.socket.recv(1024).decode()
             if response == "user_added":
-                logger.info(f"User {user} added to chat {chat}")
+                self.logger.info(f"User {user} added to chat {chat}")
             else:
-                logger.warning(f"Server response: {response}")
+                self.logger.warning(f"Server response: {response}")
             return response
         except Exception as e:
-            logger.error(f"Error adding user to chat: {e}")
+            self.logger.error(f"Error adding user to chat: {e}")
             return None
     
     def group_userrm(self, chat, user):
         if not chat or not user:
-            logger.error("Chat ID and user identifier cannot be empty")
+            self.logger.error("Chat ID and user identifier cannot be empty")
             return None
         
         try:
@@ -160,21 +170,52 @@ class ServerConnection:
             time.sleep(0.1)
             response = self.socket.recv(1024).decode()
             if response == "user_removed":
-                logger.info(f"User {user} removed from chat {chat}")
+                self.logger.info(f"User {user} removed from chat {chat}")
             else:
-                logger.warning(f"Server response: {response}")
+                self.logger.warning(f"Server response: {response}")
             return response
         except Exception as e:
-            logger.error(f"Error removing user from chat: {e}")
+            self.logger.error(f"Error removing user from chat: {e}")
             return None
+
+def fetch_certificate(host, port=8081):
+    """Holt das Zertifikat einmalig vom Server und speichert es lokal."""
+    if os.path.exists(CERT_PATH):
+        return  # schon gespeichert, nichts tun
     
+    print(f"Erstes Verbinden – lade Zertifikat von {host}:{port}...")
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((host, port))
+    
+    cert_data = b''
+    while True:
+        chunk = sock.recv(4096)
+        if not chunk:
+            break
+        cert_data += chunk
+    sock.close()
+    
+    with open(CERT_PATH, 'wb') as f:
+        f.write(cert_data)
+    print(f"Zertifikat gespeichert unter {CERT_PATH}")
+    print("WICHTIG: Bitte prüfe den Fingerprint beim Server:")
+    
+    import subprocess
+    result = subprocess.run(
+        ['openssl', 'x509', '-fingerprint', '-sha256', '-noout', '-in', CERT_PATH],
+        capture_output=True, text=True
+    )
+    print(result.stdout)
+
+
 def main():
+    INIT()
     conn = ServerConnection(SERVER_HOST, SERVER_PORT)
     if GUI_ENABLED:
-        logger.info("GUI mode is enabled, but GUI implementation is not provided in this code snippet.")
+        log.info("GUI mode is enabled, but GUI implementation is not provided in this code snippet.")
         # Here you would initialize and run your GUI, passing the ServerConnection instance to it.
     else:
-        logger.info("Running in CLI mode. You can implement CLI interactions here.")
+        log.info("Running in CLI mode. You can implement CLI interactions here.")
         # Example CLI interaction (you can expand this as needed):
         while True:
             command = input("Enter command >>> ").strip().lower()
@@ -211,12 +252,12 @@ def main():
                 user = input("Enter user identifier to remove: ")
                 conn.group_userrm(chat_id, user)
             elif command == "help":
-                logger.info("Available commands: list, create, send, get, adduser, rmuser, quit")
+                log.info("Available commands: list, create, send, get, adduser, rmuser, quit")
             elif command == "quit":
-                logger.info("Exiting client.")
+                log.info("Exiting client.")
                 break
             else:
-                logger.warning("Unknown command. Please try again.")
+                log.warning("Unknown command. Please try again.")
 
 if __name__ == "__main__":
     main()
