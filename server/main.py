@@ -1,18 +1,18 @@
 #!/bin/python
 import socket
 import subprocess
+import sys
 import threading
 import logging
 import messagesm
 import ssl
 import os
+import json
 
-VERSION = "1.8.2"
+
+VERSION = "1.10-beta3"
 
 SERVER_PORT = 8080          # Standard Port: 8080
-
-CERT_PATH = 'cert.pem'
-KEY_PATH = 'key.pem'
 
 # Lists:
 clients = []  
@@ -24,27 +24,77 @@ def INIT():
     global logger
     logging.basicConfig(level="DEBUG", format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
+    load_config()  # Load configuration at startup
+    configurate_server()  # Configure server based on loaded config
+
+def load_config(path='config.json'):
+    try:
+        with open(path, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logger.error(f"Config-Datei nicht gefunden: {path}")
+        sys.exit(1)
+    except json.JSONDecodeError as e:
+        logger.error(f"Fehler in config.json: {e}")
+        sys.exit(1)
+
+def configurate_server():
+    global ENCRYPTION_ENABLED, DNS_ENABLED, DNS_NAME, IP_ADDRESS, CERT_PATH, KEY_PATH, SERVER_PORT, VERSION
+    config = load_config()
+    VERSION             = config['VERSION']
+    SERVER_PORT         = config['SERVER_PORT']
+    ENCRYPTION_ENABLED  = config['ENCRYPTION_ENABLED']
+    DNS_ENABLED         = config['DNS_ENABLED']
+    DNS_NAME            = config['DNS_NAME']
+    IP_ADDRESS          = config['IP_ADDRESS']
+    CERT_PATH           = config['CERT_PATH']
+    KEY_PATH            = config['KEY_PATH']
+
+def certificate_matches_config():
+    try:
+        result = subprocess.run(
+            ['openssl', 'x509', '-in', CERT_PATH, '-text', '-noout'],
+            capture_output=True, text=True, check=True
+        )
+        output = result.stdout
+        if DNS_ENABLED:
+            return f"DNS:{DNS_NAME}" in output
+        else:
+            return f"IP Address:{IP_ADDRESS}" in output
+    except Exception as e:
+        logging.warning(f"Konnte Zertifikat nicht prüfen: {e}")
+        return False
 
 def ensure_certificates():
     global CERT_PATH, KEY_PATH
-    
-    if not os.path.exists(CERT_PATH) or not os.path.exists(KEY_PATH):
+    cert_missing = not os.path.exists(CERT_PATH) or not os.path.exists(KEY_PATH)
+    cert_outdated = not cert_missing and not certificate_matches_config()
+    if cert_missing or cert_outdated:
         try:
-            print("Zertifikat nicht gefunden, erstelle neu...")
+            if cert_outdated:
+                logger.warning("Zertifikat passt nicht zur Config, erstelle neu...")
+            else:
+                logger.info("Zertifikat nicht gefunden, erstelle neu...")
+            if DNS_ENABLED:
+                SUBJ = f"/CN={DNS_NAME}"
+                SAN = f"DNS:{DNS_NAME}"
+            else:
+                SUBJ = f"/CN={IP_ADDRESS}"
+                SAN = f"IP:{IP_ADDRESS}"
             subprocess.run([
                 'openssl', 'req', '-x509', '-newkey', 'rsa:4096',
                 '-keyout', KEY_PATH, '-out', CERT_PATH,
                 '-days', '365', '-nodes',
-                '-subj', '/CN=127.0.0.1',
-                '-addext', 'subjectAltName=IP:127.0.0.1'
-            ], check=True)
-            print("Zertifikat erstellt.")
+                '-subj', SUBJ,
+                '-addext', f'subjectAltName={SAN}'
+            ], check=True, capture_output=True)
+            logger.info("Zertifikat erstellt.")
         except Exception as e:
-            print(f"Fehler beim Erstellen des Zertifikats: {e}")
-            print("Stelle sicher, dass OpenSSL installiert ist und im PATH liegt.")
-            print("Alternativ kannst du die Zertifikate manuell erstellen und im selben Verzeichnis ablegen.")
-            print("Breche ab.")
-            exit(1)
+            logger.debug(f"Fehler beim Erstellen des Zertifikats: {e}")
+            logger.info("Stelle sicher, dass OpenSSL installiert ist und im PATH liegt.")
+            logger.info("Alternativ kannst du die Zertifikate manuell erstellen und im selben Verzeichnis ablegen.")
+            logger.error("Breche ab.")
+            sys.exit(1)
 
 def serve_certificate(port=8081):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -58,15 +108,20 @@ def serve_certificate(port=8081):
         conn.close()
 
 def init_server(host, port):
-    ensure_certificates()
-    threading.Thread(target=serve_certificate, daemon=True).start()
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
-    raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    raw_sock.bind((host, port))
-    raw_sock.listen(5)
+    if ENCRYPTION_ENABLED:
+        ensure_certificates()
+        threading.Thread(target=serve_certificate, daemon=True).start()
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
+        raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        raw_sock.bind((host, port))
+        raw_sock.listen(5)
+        server_sock = context.wrap_socket(raw_sock, server_side=True)
+    else:
+        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_sock.bind((host, port))
+        server_sock.listen(5)
     logger.info(f"Server lauscht auf {host}:{port}")
-    server_sock = context.wrap_socket(raw_sock, server_side=True)
     return server_sock
 
 def main():

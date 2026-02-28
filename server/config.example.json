@@ -1,0 +1,10 @@
+{
+    "VERSION": "1.10-beta3",
+    "SERVER_PORT": 8080,
+    "ENCRYPTION_ENABLED": true,
+    "DNS_ENABLED": false,
+    "DNS_NAME": "aspm.local",
+    "IP_ADDRESS": "127.0.0.1",
+    "CERT_PATH": "cert.pem",
+    "KEY_PATH": "key.pem"
+}

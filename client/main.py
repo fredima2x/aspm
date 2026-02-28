@@ -7,18 +7,14 @@ import logging
 import ssl
 
 # Client configuration
-SERVER_HOST = "127.0.0.1"  # Server-Adresse (z.B. "localhost" oder "192.168.1.100")
-SERVER_PORT = 8080         # Server-Port (muss mit dem Server übereinstimmen)
+SERVER_HOST = "127.0.0.1"
+SERVER_PORT = 8080
 CERT_PATH = os.path.expanduser('~/.aspm_cert.pem')
-
-# DEBUG: DONT CHANGE THIS
-GUI_ENABLED = False
 
 def INIT():
     global log
     logging.basicConfig(level="DEBUG", format='%(asctime)s - %(levelname)s - %(message)s')
     log = logging.getLogger(__name__)
-    
 
 class ServerConnection:
     def __init__(self, host, port):
@@ -207,16 +203,13 @@ def fetch_certificate(host, port=8081):
     )
     print(result.stdout)
 
-
 def main():
     INIT()
     conn = ServerConnection(SERVER_HOST, SERVER_PORT)
     if GUI_ENABLED:
         log.info("GUI mode is enabled, but GUI implementation is not provided in this code snippet.")
-        # Here you would initialize and run your GUI, passing the ServerConnection instance to it.
     else:
         log.info("Running in CLI mode. You can implement CLI interactions here.")
-        # Example CLI interaction (you can expand this as needed):
         while True:
             command = input("Enter command >>> ").strip().lower()
             if command == "list":
