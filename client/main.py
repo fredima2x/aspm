@@ -1,4 +1,5 @@
 #! /bin/python
+import hashlib
 import os
 import socket
 import time
@@ -229,33 +230,30 @@ class ServerConnection:
 
 
 def fetch_certificate(host, port=8281):
-    """Holt das Zertifikat einmalig vom Server und speichert es lokal."""
+    """Holt das Zertifikat einmalig vom SSL-Handshake und speichert es lokal."""
     if os.path.exists(CERT_PATH):
-        return  # schon gespeichert, nichts tun
-    
+        return
+
     print(f"Erstes Verbinden – lade Zertifikat von {host}:{port}...")
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
-    
-    cert_data = b''
-    while True:
-        chunk = sock.recv(4096)
-        if not chunk:
-            break
-        cert_data += chunk
-    sock.close()
-    
-    with open(CERT_PATH, 'wb') as f:
-        f.write(cert_data)
-    print(f"Zertifikat gespeichert unter {CERT_PATH}")
-    print("WICHTIG: Bitte prüfe den Fingerprint beim Server:")
-    
-    import subprocess
-    result = subprocess.run(
-        ['openssl', 'x509', '-fingerprint', '-sha256', '-noout', '-in', CERT_PATH],
-        capture_output=True, text=True
-    )
-    print(result.stdout)
+
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE  # Nur beim Holen!
+
+    with socket.create_connection((host, port)) as raw_sock:
+        with context.wrap_socket(raw_sock, server_hostname=host) as ssock:
+            cert_der = ssock.getpeercert(binary_form=True)
+            cert_pem = ssl.DER_cert_to_PEM_cert(cert_der)
+
+            fingerprint = hashlib.sha256(cert_der).hexdigest()
+            fp_fmt = ":".join(fingerprint[i:i+2].upper() for i in range(0, len(fingerprint), 2))
+
+            with open(CERT_PATH, "w") as f:
+                f.write(cert_pem)
+
+            print(f"Zertifikat gespeichert unter {CERT_PATH}")
+            print(f"WICHTIG: Bitte prüfe den Fingerprint beim Server:")
+            print(f"sha256 Fingerprint={fp_fmt}")
 
 def main():
     INIT()
