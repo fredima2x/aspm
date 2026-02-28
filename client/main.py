@@ -175,6 +175,40 @@ class ServerConnection:
         except Exception as e:
             self.logger.error(f"Error removing user from chat: {e}")
             return None
+    
+    def delete_account(self):
+        self.logger.info("Requesting account deletion...")
+        try:
+            self.socket.sendall("delete_account".encode())
+            time.sleep(0.1)
+            response = self.socket.recv(1024).decode()
+            if response == "account_deleted":
+                self.logger.info("Account deleted successfully")
+            else:
+                self.logger.warning(f"Server response: {response}")
+            return response
+        except Exception as e:
+            self.logger.error(f"Error deleting account: {e}")
+            return None
+    def delete_chat(self, chat_id=None):
+        if not chat_id:
+            self.logger.error("Chat ID cannot be empty")
+            return None
+        
+        self.logger.info(f"Requesting deletion of chat {chat_id}...")
+        try:
+            self.socket.sendall(f"delete_chat;{chat_id}".encode())
+            time.sleep(0.1)
+            response = self.socket.recv(1024).decode()
+            if response == "chat_deleted":
+                self.logger.info(f"Chat {chat_id} deleted successfully")
+            else:
+                self.logger.warning(f"Server response: {response}")
+            return response
+        except Exception as e:
+            self.logger.error(f"Error deleting chat: {e}")
+            return None
+
 
 def fetch_certificate(host, port=8081):
     """Holt das Zertifikat einmalig vom Server und speichert es lokal."""
@@ -247,11 +281,20 @@ def main():
                 user = input("Enter user identifier to remove: ")
                 conn.group_userrm(chat_id, user)
             elif command == "delete_account":
-                pass
+                confirmation = input("Are you sure you want to delete your account? This action cannot be undone. (yes/no): ")
+                if confirmation.lower() == "yes":
+                    conn.delete_account()
+                else:
+                    log.info("Account deletion cancelled.")
             elif command == "delete_chat":
-                pass
+                chat_id = input("Enter chat ID to delete: ")
+                confirmation = input(f"Are you sure you want to delete chat {chat_id}? This action cannot be undone. (yes/no): ")
+                if confirmation.lower() == "yes":
+                    conn.delete_chat(chat_id)
+                else:
+                    log.info("Chat deletion cancelled.")
             elif command == "help":
-                log.info("Available commands: list, create, send, get, adduser, rmuser, quit")
+                log.info("Available commands: list, create, send, get, adduser, rmuser, quit, signup, login, delete_account, delete_chat")
             elif command == "quit":
                 log.info("Exiting client.")
                 break
