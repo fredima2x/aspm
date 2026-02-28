@@ -102,9 +102,19 @@ class ClientHandler(threading.Thread):
                             continue
                         chat_id = int(ready_message[1])
                         self.delete_chat(chat_id)
+                    elif ready_message[0] == "delete_message":
+                        if len(ready_message) < 2:
+                            self.logger.error("Incomplete delete_message request")
+                            continue
+                        message_id = int(ready_message[1])
+                        self.delete_message(message_id)
+                    else:
+                        self.logger.warning(f"Unknown command from {self.addr}: {ready_message[0]}")
+                        self.client_socket.sendall("unknown_command".encode())
                 except ValueError as e:
                     self.logger.error(f"Invalid parameter format: {e}")
                     self.client_socket.sendall("invalid_parameters".encode())
+
         # Cleanup on disconnect
         self.clients_lock.acquire()
         self.clients.remove(self.client_socket)
@@ -205,9 +215,15 @@ class ClientHandler(threading.Thread):
         else:
             self.client_socket.sendall("chat_creation_failed".encode())
             self.logger.error(f"Fehler bei der Erstellung des Chats '{chat_name}' für {self.addr}")   
-    def delete_account(self):
+    def delete_account(self, recoursive=True):
         try:
             self.db.delete_account(self.user_id)
+            if recoursive:
+                self.db.delete_all_user_messages(self.user_id)
+                group_chats = self.db.get_user_chats(self.user_id)
+                for chat in group_chats:
+                    chat_id = chat[0]
+                    self.db.remove_from_chat(chat_id, self.user_id)
             self.client_socket.sendall("account_deleted".encode())
             self.logger.info(f"User {self.addr} deleted their account")
             self.verified_user = False
@@ -219,7 +235,7 @@ class ClientHandler(threading.Thread):
         except Exception as e:
             self.logger.error(f"Error deleting account for user {self.addr}: {e}")
             self.client_socket.sendall("account_deletion_failed".encode())
-    def delete_chat(self, chat_id):
+    def delete_chat(self, chat_id, recoursive=True):
         try:
             # Check if user is the last admin of the chat before allowing deletion
             member = self.db.get_chat_members(chat_id)
@@ -236,14 +252,29 @@ class ClientHandler(threading.Thread):
             self.logger.warning(f"User {self.addr} attempted to delete chat {chat_id} but is not a member")
             return
         try:
-            stat = self.db.delete_chat(chat_id)
+            self.db.delete_chat(chat_id)
+            for m in member:
+                try:
+                    self.db.remove_from_chat(chat_id, m)
+                except Exception as e:
+                    self.logger.error(f"Error removing user {m} from chat {chat_id}: {e}")
+            if recoursive:
+                try:
+                    self.db.delete_all_chat_messages(chat_id)
+                except Exception as e:
+                    self.logger.error(f"Error deleting all messages in chat {chat_id}: {e}")
             self.client_socket.sendall("chat_deleted".encode())
             self.logger.info(f"Chat {chat_id} deleted by user {self.addr}")
         except Exception as e:
             self.logger.error(f"Error deleting chat {chat_id}: {e}")
             self.client_socket.sendall("chat_deletion_failed".encode())
-        finally:
-            if stat:
-                self.logger.debug(f"Chat {chat_id} successfully deleted")
-            else:
-                self.logger.error(f"Failed to delete chat {chat_id} for unknown reasons")
+    def delete_message(self, message_id):
+        try:
+            self.db.delete_message(message_id, self.user_id)
+            self.client_socket.sendall("message_deleted".encode())
+            self.logger.info(f"Message {message_id} deleted by user {self.addr}")
+        except Exception as e:
+            self.logger.error(f"Error deleting message {message_id}: {e}")
+            self.client_socket.sendall("message_deletion_failed".encode())
+        
+    

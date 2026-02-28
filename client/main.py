@@ -208,6 +208,25 @@ class ServerConnection:
         except Exception as e:
             self.logger.error(f"Error deleting chat: {e}")
             return None
+    def delete_message(self, message_id=None):
+        if not message_id:
+            self.logger.error("Message ID cannot be empty")
+            return None
+        
+        self.logger.info(f"Requesting deletion of message {message_id}...")
+
+        try:
+            self.socket.sendall(f"delete_message;{message_id}".encode())
+            time.sleep(0.1)
+            response = self.socket.recv(1024).decode()
+            if response == "message_deleted":
+                self.logger.info(f"Message {message_id} deleted successfully")
+            else:
+                self.logger.warning(f"Server response: {response}")
+            return response
+        except Exception as e:
+            self.logger.error(f"Error deleting message: {e}")
+            return None
 
 
 def fetch_certificate(host, port=8081):
@@ -293,6 +312,14 @@ def main():
                     conn.delete_chat(chat_id)
                 else:
                     log.info("Chat deletion cancelled.")
+            elif command == "delete_message":
+                chat_id = input("Enter chat ID: ")
+                message_id = input("Enter message ID to delete: ")
+                confirmation = input(f"Are you sure you want to delete message {message_id} in chat {chat_id}? This action cannot be undone. (yes/no): ")
+                if confirmation.lower() == "yes":
+                    conn.delete_message(chat_id, message_id)
+                else:
+                    log.info("Message deletion cancelled.")
             elif command == "help":
                 log.info("Available commands: list, create, send, get, adduser, rmuser, quit, signup, login, delete_account, delete_chat")
             elif command == "quit":

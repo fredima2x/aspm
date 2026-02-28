@@ -388,3 +388,51 @@ class DatabaseManager:
             return False
         finally:
             conn.close()
+    def force_delete_message(self, message_id):
+        """Admin-Funktion: Nachricht ohne Sender-Check löschen"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "DELETE FROM messages WHERE message_id = ?",
+                (message_id,)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            self.logger.error(f"FORCE_DELETE_MESSAGE: Fehler - {str(e)}")
+            return False
+        finally:
+            conn.close()
+    def delete_all_user_messages(self, user_id):
+        """Admin-Funktion: Alle Nachrichten eines Benutzers löschen"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "DELETE FROM messages WHERE sender_id = ?",
+                (user_id,)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            self.logger.error(f"DELETE_ALL_USER_MESSAGES: Fehler - {str(e)}")
+            return False
+        finally:
+            conn.close()
+    def delete_all_chat_messages(self, chat_id):
+        """Admin-Funktion: Alle Nachrichten eines Chats löschen"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "DELETE FROM messages WHERE chat_id = ?",
+                (chat_id,)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            self.logger.error(f"DELETE_ALL_CHAT_MESSAGES: Fehler - {str(e)}")
+            return False
+        finally:
+            conn.close()
