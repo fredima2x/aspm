@@ -10,7 +10,7 @@ import os
 import json
 
 
-VERSION = "1.10-beta3"
+VERSION = "1.10.2-beta2"
 
 SERVER_PORT = 8080          # Standard Port: 8080
 
