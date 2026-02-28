@@ -30,7 +30,7 @@ class ServerConnection:
     def connect(self):
         try:
             try:
-                fetch_certificate(self.host, CERT_PORT)  # Zertifikat einmalig vom Server holen
+                fetch_certificate(self.host, self.port)  # Zertifikat einmalig vom Server holen
             except Exception as e:
                 log.error(f"Failed to fetch certificate: {e}")
                 exit(1)
@@ -230,8 +230,7 @@ class ServerConnection:
             return None
 
 
-def fetch_certificate(host, port=8281):
-    """Holt das Zertifikat einmalig vom SSL-Handshake und speichert es lokal."""
+def fetch_certificate(host, port=8280):
     if os.path.exists(CERT_PATH):
         return
 
@@ -239,7 +238,7 @@ def fetch_certificate(host, port=8281):
 
     context = ssl.create_default_context()
     context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE  # Nur beim Holen!
+    context.verify_mode = ssl.CERT_NONE
 
     with socket.create_connection((host, port)) as raw_sock:
         with context.wrap_socket(raw_sock, server_hostname=host) as ssock:
