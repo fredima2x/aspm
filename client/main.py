@@ -7,10 +7,9 @@ import logging
 import ssl
 
 # Client configuration
-SERVER_HOST = "127.0.0.1"
-SERVER_PORT = 8080
+SERVER_HOST = "fredima.de"  # IP-Adresse des Servers
 CERT_PATH = os.path.expanduser('~/.aspm_cert.pem')
-
+SERVER_PORT = 8080
 GUI_ENABLED = False  # Set to True if you have a GUI implementation
 
 def INIT():
@@ -29,7 +28,7 @@ class ServerConnection:
     def connect(self):
         try:
             try:
-                fetch_certificate(SERVER_HOST, port=8081)  # Zertifikat einmalig vom Server holen
+                fetch_certificate(SERVER_HOST, port=8281)  # Zertifikat einmalig vom Server holen
             except Exception as e:
                 log.error(f"Failed to fetch certificate: {e}")
                 exit(1)
@@ -229,7 +228,7 @@ class ServerConnection:
             return None
 
 
-def fetch_certificate(host, port=8081):
+def fetch_certificate(host, port=8281):
     """Holt das Zertifikat einmalig vom Server und speichert es lokal."""
     if os.path.exists(CERT_PATH):
         return  # schon gespeichert, nichts tun
@@ -263,6 +262,7 @@ def main():
     conn = ServerConnection(SERVER_HOST, SERVER_PORT)
     if GUI_ENABLED:
         log.info("GUI mode is enabled, but GUI implementation is not provided in this code snippet.")
+        ### HIER! GUI-Implementierung einfügen
     else:
         log.info("Running in CLI mode. You can implement CLI interactions here.")
         while True:

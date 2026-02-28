@@ -12,7 +12,7 @@ import json
 
 VERSION = "1.10.2-beta2"
 
-SERVER_PORT = 8080          # Standard Port: 8080
+SERVER_PORT = 8280          # Standard Port: 8080
 
 # Lists:
 clients = []  
@@ -39,7 +39,8 @@ def load_config(path='config.json'):
         sys.exit(1)
 
 def configurate_server():
-    global ENCRYPTION_ENABLED, DNS_ENABLED, DNS_NAME, IP_ADDRESS, CERT_PATH, KEY_PATH, SERVER_PORT, VERSION
+    global ENCRYPTION_ENABLED, DNS_ENABLED, DNS_NAME, IP_ADDRESS, CERT_PATH, KEY_PATH, SERVER_PORT, VERSION, BIND_TO, CERT_SERVER_PORT
+    
     config = load_config()
     VERSION             = config['VERSION']
     SERVER_PORT         = config['SERVER_PORT']
@@ -49,6 +50,8 @@ def configurate_server():
     IP_ADDRESS          = config['IP_ADDRESS']
     CERT_PATH           = config['CERT_PATH']
     KEY_PATH            = config['KEY_PATH']
+    BIND_TO             = config['BIND_TO']
+    CERT_SERVER_PORT    = config('CERT_SERVER_PORT') 
 
 def certificate_matches_config():
     try:
@@ -96,10 +99,10 @@ def ensure_certificates():
             logger.error("Breche ab.")
             sys.exit(1)
 
-def serve_certificate(port=8081):
+def serve_certificate(CERT_SERVER_PORT=8281):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(('0.0.0.0', port))
+    sock.bind(('0.0.0.0', CERT_SERVER_PORT))
     sock.listen(5)
     while True:
         conn, _ = sock.accept()
@@ -110,7 +113,7 @@ def serve_certificate(port=8081):
 def init_server(host, port):
     if ENCRYPTION_ENABLED:
         ensure_certificates()
-        threading.Thread(target=serve_certificate, daemon=True).start()
+        threading.Thread(target=serve_certificate, daemon=True, args=(CERT_SERVER_PORT,)).start()
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
         raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -126,7 +129,7 @@ def init_server(host, port):
 
 def main():
     INIT()
-    server_socket = init_server("localhost", SERVER_PORT)
+    server_socket = init_server(BIND_TO, SERVER_PORT)
     while True:
         client_socket, addr = server_socket.accept()
         client_handler = messagesm.ClientHandler(client_socket, addr, clients, clients_lock, clients_data, clients_data_lock)
