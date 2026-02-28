@@ -207,7 +207,7 @@ class ClientHandler(threading.Thread):
             self.logger.error(f"Fehler bei der Erstellung des Chats '{chat_name}' für {self.addr}")   
     def delete_account(self):
         try:
-            self.db.delete_user(self.user_id)
+            self.db.delete_account(self.user_id)
             self.client_socket.sendall("account_deleted".encode())
             self.logger.info(f"User {self.addr} deleted their account")
             self.verified_user = False

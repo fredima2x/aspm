@@ -373,3 +373,18 @@ class DatabaseManager:
             return False
         finally:
             conn.close()
+    def delete_account(self, user_id):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "DELETE FROM users WHERE user_id = ?",
+                (user_id,)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            self.logger.error(f"DELETE_ACCOUNT: Fehler - {str(e)}")
+            return False
+        finally:
+            conn.close()
