@@ -244,6 +244,10 @@ def main():
                 chat_id = input("Enter chat ID: ")
                 user = input("Enter user identifier to remove: ")
                 conn.group_userrm(chat_id, user)
+            elif command == "delete_account":
+                pass
+            elif command == "delete_chat":
+                pass
             elif command == "help":
                 log.info("Available commands: list, create, send, get, adduser, rmuser, quit")
             elif command == "quit":
