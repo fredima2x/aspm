@@ -241,10 +241,11 @@ from PyQt5 import uic
 import sys
 
 class LoginSignupDialog(QDialog):
-    def __init__(self):
+    def __init__(self, conn):
         super().__init__()
         uic.loadUi("gui/gui_login.ui", self)
-        
+        self.conn = conn
+
         # Nach erfolgreichem Login/Signup speichern wir den Nutzernamen hier,
         # damit das Hauptfenster weiß wer eingeloggt ist.
         self.username = None
@@ -268,17 +269,17 @@ class LoginSignupDialog(QDialog):
     def try_login(self):
         username = self.enter_username_line_2.text().strip()
         password = self.enter_password_line_2.text()
-        
         # Eingabevalidierung – beide Felder müssen ausgefüllt sein
         if not username or not password:
             QMessageBox.warning(self, "Fehler", "Bitte Benutzername und Passwort eingeben.")
             return
-        
-        # TODO: Hier kommt später dein echter API-Aufruf zum Server.
-        # Zum Beispiel: response = api.login(username, password)
-        # Wenn der Server antwortet und die Daten korrekt sind, rufen wir accept() auf.
-        
-        # Für jetzt simulieren wir einen erfolgreichen Login:
+        stat = self.conn.verify_credentials(username, password, sign_up=False)
+        if stat != "verified":
+            QMessageBox.warning(self, "Fehler", "Ungültige Anmeldedaten. Bitte versuche es erneut.")
+            # Passwortfeld leeren damit der Nutzer neu eingibt
+            self.enter_password_line_2.clear()
+            self.enter_password_line_2.setFocus()
+            return
         self.username = username
         self.accept()  # Schließt den Dialog mit QDialog.Accepted
 
@@ -286,36 +287,35 @@ class LoginSignupDialog(QDialog):
         username = self.enter_username_line.text().strip()
         password = self.enter_password_line.text()
         password_repeat = self.repeat_password_line.text()
-        
-        # Schritt 1: Alle Felder ausgefüllt?
         if not username or not password or not password_repeat:
             QMessageBox.warning(self, "Fehler", "Bitte alle Felder ausfüllen.")
             return
-        
-        # Schritt 2: Stimmen die Passwörter überein?
-        # Das ist ein klassischer UX-Check der verhindert dass sich Nutzer vertippen.
         if password != password_repeat:
             QMessageBox.warning(self, "Fehler", "Die Passwörter stimmen nicht überein.")
-            # Passwortfelder leeren damit der Nutzer neu eingibt
             self.enter_password_line.clear()
             self.repeat_password_line.clear()
             self.enter_password_line.setFocus()
             return
         
-        # TODO: Hier kommt dein API-Aufruf: api.signup(username, password)
-        
-        # Nach erfolgreichem Signup direkt einloggen – bessere UX als
-        # den Nutzer nochmal manuell in den Login-Tab wechseln zu lassen.
+        stat = self.conn.verify_credentials(username, password, sign_up=True)
+        if stat != "verified":
+            QMessageBox.warning(self, "Fehler", f"Anmeldung fehlgeschlagen: {stat}")
+            self.enter_password_line.clear()
+            self.repeat_password_line.clear()
+            self.enter_password_line.setFocus()        
+
         self.username = username
         self.accept()
 
 
 
 class ChatWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, username, conn):
         super().__init__()
         uic.loadUi("gui/gui.ui", self)
-        
+        self.conn = conn
+        self.current_user = username
+
         # --- Chat-Datenstruktur ---
         # Jeder Chat hat einen Namen, eine Liste von Teilnehmern,
         # und eine Liste von Nachrichten (als Tupel: (text, received)).
@@ -353,8 +353,7 @@ class ChatWindow(QMainWindow):
     def _create_chat(self, name, members=None):
         """Interne Hilfsmethode: legt einen Chat an und fügt ihn der Sidebar hinzu."""
         if name in self.chats:
-            return  # Chat existiert bereits, nichts tun
-        
+            return  # Chat existiert bereits, nichts tun        
         self.chats[name] = {
             "members": members or [],
             "messages": []  # Wird beim Senden befüllt: [(text, received), ...]
@@ -584,7 +583,7 @@ def main():
         app = QApplication(sys.argv)
         
         # Zuerst Login-Dialog öffnen und blockierend warten
-        dialog = LoginSignupDialog()
+        dialog = LoginSignupDialog(conn=conn)
         if dialog.exec_() != QDialog.Accepted:
             # Nutzer hat abgebrochen – App beenden ohne ChatWindow zu öffnen
             sys.exit(0)
@@ -593,7 +592,7 @@ def main():
         username = dialog.username
         
         # Jetzt erst das Hauptfenster öffnen, mit dem Nutzernamen
-        window = ChatWindow(username=username)
+        window = ChatWindow(username=username, conn=conn)
         window.show()
         sys.exit(app.exec_())
 
