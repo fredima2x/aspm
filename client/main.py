@@ -236,6 +236,81 @@ class ServerConnection:
             self.logger.error(f"Error deleting message: {e}")
             return None
 
+from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QMessageBox
+from PyQt5 import uic
+import sys
+
+class LoginSignupDialog(QDialog):
+    def __init__(self):
+        super().__init__()
+        uic.loadUi("gui/gui_login.ui", self)
+        
+        # Nach erfolgreichem Login/Signup speichern wir den Nutzernamen hier,
+        # damit das Hauptfenster weiß wer eingeloggt ist.
+        self.username = None
+        
+        # Buttons mit ihren Funktionen verbinden
+        self.login_button.clicked.connect(self.try_login)
+        self.signup_button.clicked.connect(self.try_signup)
+        
+        # Enter-Taste in den Passwortfeldern soll auch funktionieren
+        self.enter_password_line_2.returnPressed.connect(self.try_login)
+        self.repeat_password_line.returnPressed.connect(self.try_signup)
+        
+        # Wichtig: Passwortfelder als Passwortfelder konfigurieren.
+        # Das wurde im Designer nicht gesetzt, also machen wir es hier.
+        # QLineEdit.Password zeigt Punkte statt Klartext.
+        from PyQt5.QtWidgets import QLineEdit
+        self.enter_password_line_2.setEchoMode(QLineEdit.Password)
+        self.enter_password_line.setEchoMode(QLineEdit.Password)
+        self.repeat_password_line.setEchoMode(QLineEdit.Password)
+
+    def try_login(self):
+        username = self.enter_username_line_2.text().strip()
+        password = self.enter_password_line_2.text()
+        
+        # Eingabevalidierung – beide Felder müssen ausgefüllt sein
+        if not username or not password:
+            QMessageBox.warning(self, "Fehler", "Bitte Benutzername und Passwort eingeben.")
+            return
+        
+        # TODO: Hier kommt später dein echter API-Aufruf zum Server.
+        # Zum Beispiel: response = api.login(username, password)
+        # Wenn der Server antwortet und die Daten korrekt sind, rufen wir accept() auf.
+        
+        # Für jetzt simulieren wir einen erfolgreichen Login:
+        self.username = username
+        self.accept()  # Schließt den Dialog mit QDialog.Accepted
+
+    def try_signup(self):
+        username = self.enter_username_line.text().strip()
+        password = self.enter_password_line.text()
+        password_repeat = self.repeat_password_line.text()
+        
+        # Schritt 1: Alle Felder ausgefüllt?
+        if not username or not password or not password_repeat:
+            QMessageBox.warning(self, "Fehler", "Bitte alle Felder ausfüllen.")
+            return
+        
+        # Schritt 2: Stimmen die Passwörter überein?
+        # Das ist ein klassischer UX-Check der verhindert dass sich Nutzer vertippen.
+        if password != password_repeat:
+            QMessageBox.warning(self, "Fehler", "Die Passwörter stimmen nicht überein.")
+            # Passwortfelder leeren damit der Nutzer neu eingibt
+            self.enter_password_line.clear()
+            self.repeat_password_line.clear()
+            self.enter_password_line.setFocus()
+            return
+        
+        # TODO: Hier kommt dein API-Aufruf: api.signup(username, password)
+        
+        # Nach erfolgreichem Signup direkt einloggen – bessere UX als
+        # den Nutzer nochmal manuell in den Login-Tab wechseln zu lassen.
+        self.username = username
+        self.accept()
+
+
+
 class ChatWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -504,12 +579,23 @@ def fetch_certificate(host, port=8280):
 def main():
     INIT()
     conn = ServerConnection(SERVER_HOST, SERVER_PORT)
+    
     if GUI_ENABLED:
         app = QApplication(sys.argv)
-    window = ChatWindow()
-    window.show()
-    sys.exit(app.exec_())
-
+        
+        # Zuerst Login-Dialog öffnen und blockierend warten
+        dialog = LoginSignupDialog()
+        if dialog.exec_() != QDialog.Accepted:
+            # Nutzer hat abgebrochen – App beenden ohne ChatWindow zu öffnen
+            sys.exit(0)
+        
+        # Login war erfolgreich – wir wissen jetzt wer sich angemeldet hat
+        username = dialog.username
+        
+        # Jetzt erst das Hauptfenster öffnen, mit dem Nutzernamen
+        window = ChatWindow(username=username)
+        window.show()
+        sys.exit(app.exec_())
 
     else:
         log.info("Running in CLI mode. You can implement CLI interactions here.")
