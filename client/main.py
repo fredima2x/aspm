@@ -7,7 +7,7 @@ import time
 import json as js
 import logging
 import ssl
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QLabel, 
+from PyQt5.QtWidgets import (QApplication, QDialog, QMainWindow, QLabel, 
                               QVBoxLayout, QHBoxLayout, QSizePolicy,
                               QListWidgetItem, QInputDialog, QMessageBox)
 from PyQt5.QtCore import Qt, QEvent, QTimer
@@ -236,10 +236,6 @@ class ServerConnection:
             self.logger.error(f"Error deleting message: {e}")
             return None
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QMessageBox
-from PyQt5 import uic
-import sys
-
 class LoginSignupDialog(QDialog):
     def __init__(self, conn):
         super().__init__()
@@ -306,9 +302,6 @@ class LoginSignupDialog(QDialog):
 
         self.username = username
         self.accept()
-
-
-
 class ChatWindow(QMainWindow):
     def __init__(self, username, conn):
         super().__init__()
