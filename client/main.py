@@ -367,14 +367,9 @@ class ChatWindow(QMainWindow):
         self.listWidget.setCurrentItem(item)
 
     def add_chat(self):
-        """Öffnet einen Dialog und legt einen neuen Chat an."""
         name, ok = QInputDialog.getText(self, "Neuer Chat", "Chat-Name:")
         if ok and name.strip():
             name = name.strip()
-            if name in self.chats:
-                QMessageBox.warning(self, "Fehler", f"Ein Chat namens '{name}' existiert bereits.")
-            else:
-                self._create_chat(name)
 
     def remove_chat(self):
         """Löscht den aktuell ausgewählten Chat."""
@@ -400,7 +395,6 @@ class ChatWindow(QMainWindow):
             self._clear_chat_display()
 
     def switch_chat(self, current, previous):
-        """Wird aufgerufen wenn der Nutzer in der Sidebar einen anderen Chat anklickt."""
         if not current:
             return
         
@@ -410,9 +404,13 @@ class ChatWindow(QMainWindow):
         self.current_chat = current.text()
         self._clear_chat_display()
         
-        # Alle gespeicherten Nachrichten dieses Chats neu aufbauen
-        for text, received in self.chats[self.current_chat]["messages"]:
-            self._draw_bubble(text, received)
+        messages_json = self.conn.get_messages(self.current_chat) 
+        messages = js.loads(messages_json) if messages_json else []
+        for msg in messages:
+            text = msg.get("content", "")
+            sender = msg.get("sender", "unknown")
+            received = (sender != self.current_user)
+            self._draw_bubble(f"{sender}: {text}", received)
 
     # -------------------------------------------------------------------------
     # Teilnehmer-Verwaltung
@@ -458,11 +456,6 @@ class ChatWindow(QMainWindow):
     # -------------------------------------------------------------------------
 
     def add_message(self, text, received=False, chat=None):
-        """
-        Fügt eine Nachricht hinzu und speichert sie in der Datenstruktur.
-        Der optionale Parameter 'chat' erlaubt es, Nachrichten in einen
-        bestimmten Chat zu schreiben, auch wenn er gerade nicht angezeigt wird.
-        """
         target_chat = chat or self.current_chat
         if not target_chat:
             return
@@ -545,6 +538,7 @@ class ChatWindow(QMainWindow):
                 self.send_message()
                 return True
         return super().eventFilter(obj, event)
+    
 
     
 
