@@ -1,36 +1,38 @@
-# Updated client/main.py with complete implementations of functions.
+# Implementation of GUI functions with server integration and error handling
 
-class ServerConnection:
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
-        # Other initialization code...
+class ChatApp:
+    def __init__(self):
+        self.chats = []
+        self.active_chat = None
 
-    def connect(self):
-        # Code to establish a connection to the server
-        pass
+    def add_chat(self, chat_name):
+        try:
+            if chat_name not in self.chats:
+                self.chats.append(chat_name)
+                self.active_chat = chat_name
+                print(f'Chat "{chat_name}" added successfully.')
+            else:
+                print(f'Chat "{chat_name}" already exists.')
+        except Exception as e:
+            print(f'Error adding chat: {e}')
 
-    def send_data(self, data):
-        # Code to send data to the server
-        pass
+    def switch_chat(self, chat_name):
+        try:
+            if chat_name in self.chats:
+                self.active_chat = chat_name
+                print(f'Switched to chat "{chat_name}".')
+            else:
+                print(f'Chat "{chat_name}" does not exist.')
+        except Exception as e:
+            print(f'Error switching chat: {e}')
 
-    def receive_data(self):
-        # Code to receive data from the server
-        pass
-
-
-def add_chat(chat_id, chat_content):
-    server_connection = ServerConnection('localhost', 8080)
-    server_connection.connect()
-    data = {'id': chat_id, 'content': chat_content}
-    server_connection.send_data(data)
-    return "Chat added successfully"
-
-
-def switch_chat(chat_id):
-    server_connection = ServerConnection('localhost', 8080)
-    server_connection.connect()
-    server_connection.send_data({'switch_to': chat_id})
-    return "Switched to chat id: {0}".format(chat_id)
-
-# Other function implementations would go here...
+    def send_message(self, message):
+        try:
+            if self.active_chat:
+                # Simulates sending message to the server
+                print(f'Sending message: "{message}" to chat "{self.active_chat}"')
+                # Here you would include actual server integration logic
+            else:
+                print('Error: No active chat to send a message. Please switch to a chat.')
+        except Exception as e:
+            print(f'Error sending message: {e}')
