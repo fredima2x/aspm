@@ -19,8 +19,7 @@ BINDING_PORT = 8282
 # - Port für Zertifikatsanfragen (z.B. 8281)
 
 servers = [
-    ("fredima.de", "neumann", "main", 8280, 8281),
-    ("localhost", "einstein", "main", 8280, 8281)
+    ("127.0.0.1", "einstein", "main", 8280, 8281)
 ]
 # ----------------------
 servers_json = json.dumps(servers)

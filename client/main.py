@@ -78,21 +78,15 @@ def fetch_certificate(host, port=cert_port):
     if os.path.exists(CERT_PATH):
         return
     print(f"Erstes Verbinden – lade Zertifikat von {host}:{port} ...")
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    with socket.create_connection((host, port)) as raw_sock:
-        with context.wrap_socket(raw_sock, server_hostname=host) as ssock:
-            cert_der = ssock.getpeercert(binary_form=True)
-            cert_pem = ssl.DER_cert_to_PEM_cert(cert_der)
-            fingerprint = hashlib.sha256(cert_der).hexdigest()
-            fp_fmt = ":".join(
-                fingerprint[i:i+2].upper() for i in range(0, len(fingerprint), 2)
-            )
+    try:
+        with socket.create_connection((host, port), timeout=5) as sock:
+            cert_pem = sock.recv(8192).decode()
             with open(CERT_PATH, "w") as f:
                 f.write(cert_pem)
-    print(f"Zertifikat gespeichert: {CERT_PATH}")
-    print(f"WICHTIG – Fingerprint beim Server prüfen: SHA-256: {fp_fmt}")
+        print(f"Zertifikat gespeichert: {CERT_PATH}")
+    except Exception as e:
+        log.error(f"Fehler beim Abrufen des Zertifikats: {e}")
+        raise
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -304,6 +298,7 @@ class LoginSignupDialog(QDialog):
         self.repeat_password_line.returnPressed.connect(self.try_signup)
 
     def try_login(self):
+        global USERNAME, PASSWORD, USERID
         username = self.enter_username_line_2.text().strip()
         password = self.enter_password_line_2.text()
 
@@ -326,6 +321,7 @@ class LoginSignupDialog(QDialog):
             self.enter_password_line_2.setFocus()
 
     def try_signup(self):
+        global USERNAME, PASSWORD, USERID
         username      = self.enter_username_line.text().strip()
         password      = self.enter_password_line.text()
         password_repeat = self.repeat_password_line.text()
@@ -363,53 +359,97 @@ class LoginSignupDialog(QDialog):
 class ChatWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        uic.loadUi(resource_path("assets/gui.ui"), self)
+        try:
+            log.info("ChatWindow: Lade UI...")
+            uic.loadUi(resource_path("assets/gui.ui"), self)
+            log.info("ChatWindow: UI geladen")
+        except Exception as e:
+            log.error(f"ChatWindow: Fehler beim Laden der UI: {e}", exc_info=True)
+            raise
 
-        self.conn = ServerConnection(server_host, server_port)
-
+        try:
+            log.info("ChatWindow: Verbinde zum Server...")
+            self.conn = ServerConnection(server_host, server_port)
+            log.info("ChatWindow: Mit Server verbunden")
+        except Exception as e:
+            log.error(f"ChatWindow: Fehler beim Verbinden: {e}", exc_info=True)
+            raise
 
         self.username = USERNAME
         self.password = PASSWORD
         self.user_id = USERID
 
-        self.my_sender_id = self.conn.get_myuser_id()  # Eigene user_id für Nachrichtenvergleich
+        # verify
+        if not self.conn.status():
+            log.error("ChatWindow: Verbindung zum Server fehlgeschlagen.")
+            QMessageBox.critical(self, "Fehler", "Verbindung zum Server fehlgeschlagen.")
+            sys.exit(1)
 
-        self.current_chat_id   = None  # chat_id des aktiven Chats
-        self.last_message_id   = None  # Höchste bekannte message_id – für Polling
+        try:
+            self.conn.verify_credentials(self.username, self.password)
+            self.my_sender_id = self.conn.get_myuser_id()
+            log.info(f"ChatWindow: Benutzer-ID ist {self.my_sender_id}")
+        except Exception as e:
+            log.error(f"ChatWindow: Fehler bei der Verifizierungsanfrage: {e}", exc_info=True)
+            QMessageBox.critical(self, "Fehler", "Fehler bei der Verifizierungsanfrage.")
+            sys.exit(1)
 
-        # ── ScrollArea vorbereiten ──────────────────────────────────────────
-        self.chat_layout = QVBoxLayout(self.scrollAreaWidgetContents)
-        self.chat_layout.setAlignment(Qt.AlignTop)
-        self.chat_layout.setSpacing(8)
-        self.chat_layout.setContentsMargins(10, 10, 10, 10)
 
-        # ── Fenstertitel ───────────────────────────────────────────────────
+        self.current_chat_id   = None
+        self.last_message_id   = None
+
+        try:
+            log.info("ChatWindow: Richte ScrollArea ein...")
+            self.chat_layout = QVBoxLayout(self.scrollAreaWidgetContents)
+            self.chat_layout.setAlignment(Qt.AlignTop)
+            self.chat_layout.setSpacing(8)
+            self.chat_layout.setContentsMargins(10, 10, 10, 10)
+            log.info("ChatWindow: ScrollArea eingerichtet")
+        except Exception as e:
+            log.error(f"ChatWindow: Fehler beim Einrichten der ScrollArea: {e}", exc_info=True)
+            raise
+
         self.setWindowTitle(f"ASPM – {self.username}")
 
-        # ── Signale verbinden ──────────────────────────────────────────────
-        self.send_button.clicked.connect(self.send_message)
-        self.message_text.installEventFilter(self)
-        self.addchat_button.clicked.connect(self.add_chat)
-        self.rmchat_button.clicked.connect(self.remove_chat)
-        self.adduser_button.clicked.connect(self.add_user)
-        self.rmuser_button.clicked.connect(self.remove_user)
-        self.listWidget.currentItemChanged.connect(self.switch_chat)
+        try:
+            log.info("ChatWindow: Verbinde Signale...")
+            self.send_button.clicked.connect(self.send_message)
+            self.message_text.installEventFilter(self)
+            self.addchat_button.clicked.connect(self.add_chat)
+            self.rmchat_button.clicked.connect(self.remove_chat)
+            self.adduser_button.clicked.connect(self.add_user)
+            self.rmuser_button.clicked.connect(self.remove_user)
+            self.listWidget.currentItemChanged.connect(self.switch_chat)
+            log.info("ChatWindow: Signale verbunden")
+        except Exception as e:
+            log.error(f"ChatWindow: Fehler beim Verbinden der Signale: {e}", exc_info=True)
+            raise
 
-        # ── Chatliste laden ────────────────────────────────────────────────
-        self.load_chat_list()
+        try:
+            log.info("ChatWindow: Lade Chatliste...")
+            self.load_chat_list()
+            log.info("ChatWindow: Chatliste geladen")
+        except Exception as e:
+            log.error(f"ChatWindow: Fehler beim Laden der Chatliste: {e}", exc_info=True)
+            raise
 
-        # ── Auto-Refresh Timer ─────────────────────────────────────────────
-        # Nachrichten alle 3 Sekunden auf neue prüfen
-        self.msg_timer = QTimer(self)
-        self.msg_timer.setInterval(3000)
-        self.msg_timer.timeout.connect(self._poll_messages)
-        self.msg_timer.start()
+        try:
+            log.info("ChatWindow: Starte Timer...")
+            self.msg_timer = QTimer(self)
+            self.msg_timer.setInterval(3000)
+            self.msg_timer.timeout.connect(self._poll_messages)
+            self.msg_timer.start()
 
-        # Chatliste alle 30 Sekunden aktualisieren (neue Chats, Mitgliederzahl)
-        self.chat_timer = QTimer(self)
-        self.chat_timer.setInterval(30000)
-        self.chat_timer.timeout.connect(self.load_chat_list)
-        self.chat_timer.start()
+            self.chat_timer = QTimer(self)
+            self.chat_timer.setInterval(30000)
+            self.chat_timer.timeout.connect(self.load_chat_list)
+            self.chat_timer.start()
+            log.info("ChatWindow: Timer gestartet")
+        except Exception as e:
+            log.error(f"ChatWindow: Fehler beim Starten der Timer: {e}", exc_info=True)
+            raise
+
+        log.info("ChatWindow: Initialisierung abgeschlossen")
 
     # ── Chatliste ──────────────────────────────────────────────────────────
 
@@ -600,8 +640,7 @@ class ChatWindow(QMainWindow):
         display_text = text
         if timestamp:
             # Nur HH:MM anzeigen
-            time_part = timestamp.split(" ")[-1][:5] if " " in timestamp else timestamp[:5]
-            display_text = f"{text}\n<font size='2' color='#8e8e93'>{time_part}</font>"
+            display_text = f"{text}"
 
         bubble = QLabel(display_text)
         bubble.setWordWrap(True)
@@ -716,9 +755,14 @@ def main():
         if dialog.exec_() != QDialog.Accepted:
             sys.exit(0)
 
-        window = ChatWindow(username=dialog.username)
-        window.show()
-        sys.exit(app.exec_())
+        try:
+            window = ChatWindow()
+            window.show()
+            sys.exit(app.exec_())
+        except Exception as e:
+            log.error(f"Fehler beim Öffnen des Chat-Fensters: {e}", exc_info=True)
+            QMessageBox.critical(None, "Fehler", f"Fehler beim Öffnen des Chat-Fensters:\n{e}")
+            sys.exit(1)
     else:
         conn = ServerConnection(server_host, server_port)
         log.info("Running in CLI mode.")
