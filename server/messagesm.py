@@ -108,6 +108,11 @@ class ClientHandler(threading.Thread):
                             continue
                         message_id = int(ready_message[1])
                         self.delete_message(message_id)
+                    elif ready_message[0] == "get_user_id":
+                        if len(ready_message) < 1:
+                            self.logger.error("Incomplete get_user_id request")
+                            continue
+                        self.client_socket.sendall(f"user_id;{self.user_id}".encode())
                     else:
                         self.logger.warning(f"Unknown command from {self.addr}: {ready_message[0]}")
                         self.client_socket.sendall("unknown_command".encode())
