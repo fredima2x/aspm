@@ -16,12 +16,21 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QEvent, QTimer
 from PyQt5 import uic
 
+USERNAME = None
+PASSWORD = None
+USERID   = None
+cert_port = None
+server_port = None
+server_host = None
+servers = None
+
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  Konfiguration
 # ─────────────────────────────────────────────────────────────────────────────
-SERVER_HOST = "fredima.de"
-SERVER_PORT = 8280
-CERT_PORT   = 8281
+MIRROR_SERVER_HOST = "localhost"
+MIRROR_SERVER_PORT = 8282
 CERT_PATH   = os.path.expanduser("~/.aspm_cert.pem")
 GUI_ENABLED = True
 
@@ -32,10 +41,23 @@ GUI_ENABLED = True
 def INIT():
     global log
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s"
     )
     log = logging.getLogger(__name__)
+
+def get_server_info():
+    global servers
+    """Fragt den Server Mirror nach verfügbaren Servern und gibt die erste gültige Antwort zurück."""
+    try:
+        with socket.create_connection((MIRROR_SERVER_HOST, MIRROR_SERVER_PORT), timeout=5) as sock:
+            data = sock.recv(4096).decode()
+            servers = js.loads(data)
+            log.info(f"Empfangene Serverinformationen: {servers}")
+    except Exception as e:
+        log.error(f"Fehler beim Abrufen der Serverinformationen: {e}")
+    # "with" block handles socket closing automatically; no finally block needed
+    return None
 
 
 def resource_path(relative_path):
@@ -52,7 +74,7 @@ def resource_path(relative_path):
 # ─────────────────────────────────────────────────────────────────────────────
 #  Zertifikat
 # ─────────────────────────────────────────────────────────────────────────────
-def fetch_certificate(host, port=CERT_PORT):
+def fetch_certificate(host, port=cert_port):
     if os.path.exists(CERT_PATH):
         return
     print(f"Erstes Verbinden – lade Zertifikat von {host}:{port} ...")
@@ -82,11 +104,14 @@ class ServerConnection:
         self.host = host
         self.port = port
         self.socket = None
-        self.connect()
-
+        try:
+            self.connect()
+        except Exception as e:
+            self.logger.error(f"Failed to connect to server: {e}")
+    
     def connect(self):
         try:
-            fetch_certificate(self.host, CERT_PORT)
+            fetch_certificate(server_host, cert_port)
         except Exception as e:
             log.error(f"Failed to fetch certificate: {e}")
             exit(1)
@@ -99,11 +124,19 @@ class ServerConnection:
             self.logger.info(f"Connected to server at {self.host}:{self.port}")
         except ConnectionRefusedError:
             self.logger.error(f"Failed to connect to server at {self.host}:{self.port}")
-            raise
         except Exception as e:
             self.logger.error(f"Connection error: {e}")
-            raise
 
+    def close(self):
+        if self.socket:
+            self.socket.close()
+            self.logger.info("Connection closed")
+
+    def status(self):
+        if self.socket and self.socket.fileno() != -1:
+            return True
+        return False
+        
     def verify_credentials(self, username, password, sign_up=False):
         if not username or not password:
             self.logger.error("Username and password cannot be empty")
@@ -249,15 +282,14 @@ class ServerConnection:
             self.logger.error(f"Error retrieving user ID: {e}")
             return None
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 #  Login / Signup Dialog
 # ─────────────────────────────────────────────────────────────────────────────
 class LoginSignupDialog(QDialog):
-    def __init__(self, conn):
+    def __init__(self):
         super().__init__()
         uic.loadUi(resource_path("assets/gui_login.ui"), self)
-        self.conn = conn
+        self.conn = ServerConnection(server_host, server_port)
         self.username = None  # Gesetzt nach erfolgreichem Login/Signup
 
         # Passwortfelder maskieren
@@ -281,7 +313,11 @@ class LoginSignupDialog(QDialog):
 
         response = self.conn.verify_credentials(username, password, sign_up=False)
         if response == "verified":
+            USERNAME = username
+            PASSWORD = password
+            USERID = self.conn.get_myuser_id()
             self.username = username
+            self.conn.close()
             self.accept()
         else:
             QMessageBox.warning(self, "Login fehlgeschlagen",
@@ -307,7 +343,11 @@ class LoginSignupDialog(QDialog):
 
         response = self.conn.verify_credentials(username, password, sign_up=True)
         if response == "verified":
+            USERNAME = username
+            PASSWORD = password
+            USERID = self.conn.get_myuser_id()
             self.username = username
+            self.conn.close()  # Neue Verbindung im ChatWindow mit gültigen Credentials
             self.accept()
         else:
             # BUG FIX: Vorher wurde accept() auch bei Fehler aufgerufen
@@ -321,12 +361,17 @@ class LoginSignupDialog(QDialog):
 #  Chat-Hauptfenster
 # ─────────────────────────────────────────────────────────────────────────────
 class ChatWindow(QMainWindow):
-    def __init__(self, conn, username):
+    def __init__(self):
         super().__init__()
         uic.loadUi(resource_path("assets/gui.ui"), self)
 
-        self.conn     = conn
-        self.username = username
+        self.conn = ServerConnection(server_host, server_port)
+
+
+        self.username = USERNAME
+        self.password = PASSWORD
+        self.user_id = USERID
+
         self.my_sender_id = self.conn.get_myuser_id()  # Eigene user_id für Nachrichtenvergleich
 
         self.current_chat_id   = None  # chat_id des aktiven Chats
@@ -556,7 +601,7 @@ class ChatWindow(QMainWindow):
         if timestamp:
             # Nur HH:MM anzeigen
             time_part = timestamp.split(" ")[-1][:5] if " " in timestamp else timestamp[:5]
-            display_text = f"{text}\n{time_part}"
+            display_text = f"{text}\n<font size='2' color='#8e8e93'>{time_part}</font>"
 
         bubble = QLabel(display_text)
         bubble.setWordWrap(True)
@@ -642,19 +687,40 @@ class ChatWindow(QMainWindow):
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     INIT()
-    conn = ServerConnection(SERVER_HOST, SERVER_PORT)
+    get_server_info()
+
+    if not servers:
+        log.error("Keine Serverinformationen verfügbar. Bitte Server Mirror überprüfen.")
+        sys.exit(1)
+
+    if len(servers) == 1:
+        server_info = servers[0]
+        log.info(f"Einziger Server gefunden: {server_info}")
+    else:
+        log.info("Mehrere Server gefunden:")
+        for idx, srv in enumerate(servers):
+            log.info(f"{idx+1}. {srv}")
+    
+    # ensure the globals used by ServerConnection are updated
+    global server_host, server_port, cert_port
+
+    # Benutze den ersten Server in der Liste (kann später um Auswahl erweitert werden)
+    server_host, _, _, server_port, cert_port = servers[0]
+
+    log.info(f"Verwende Server: {server_host}:{server_port} (Zertifikat: Port {cert_port})")
 
     if GUI_ENABLED:
         app = QApplication(sys.argv)
 
-        dialog = LoginSignupDialog(conn)
+        dialog = LoginSignupDialog()
         if dialog.exec_() != QDialog.Accepted:
             sys.exit(0)
 
-        window = ChatWindow(conn=conn, username=dialog.username)
+        window = ChatWindow(username=dialog.username)
         window.show()
         sys.exit(app.exec_())
     else:
+        conn = ServerConnection(server_host, server_port)
         log.info("Running in CLI mode.")
         while True:
             command = input("Enter command >>> ").strip().lower()
@@ -696,6 +762,7 @@ def main():
                       "signup, login, delete_account, delete_chat, delete_message, quit")
             elif command == "quit":
                 log.info("Exiting.")
+                conn.close()
                 break
             else:
                 log.warning("Unbekannter Befehl.")
