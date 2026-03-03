@@ -316,6 +316,7 @@ class ChatWindow(QMainWindow):
 
         self.conn     = conn
         self.username = username
+        self.my_sender_id = self.conn.get_myuser_id()  # Eigene user_id für Nachrichtenvergleich
 
         self.current_chat_id   = None  # chat_id des aktiven Chats
         self.last_message_id   = None  # Höchste bekannte message_id – für Polling
