@@ -9,7 +9,7 @@ on:
 
 defaults:
   run:
-    working-directory: fredima2x/aspm/client   # ← Alle Schritte laufen hier
+    working-directory: client   # ← Alle Schritte laufen hier
 
 jobs:
 
