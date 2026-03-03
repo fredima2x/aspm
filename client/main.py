@@ -38,6 +38,17 @@ def INIT():
     log = logging.getLogger(__name__)
 
 
+def resource_path(relative_path):
+    """Gibt den korrekten Pfad zurück – im Dev-Modus und nach PyInstaller-Build."""
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller-Build: Dateien sind in einem temp-Ordner entpackt
+        base_path = sys._MEIPASS
+    else:
+        # Normaler Dev-Modus
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  Zertifikat
 # ─────────────────────────────────────────────────────────────────────────────
@@ -245,7 +256,7 @@ class ServerConnection:
 class LoginSignupDialog(QDialog):
     def __init__(self, conn):
         super().__init__()
-        uic.loadUi("gui/gui_login.ui", self)
+        uic.loadUi(resource_path("assets/gui_login.ui"), self)
         self.conn = conn
         self.username = None  # Gesetzt nach erfolgreichem Login/Signup
 
@@ -312,7 +323,7 @@ class LoginSignupDialog(QDialog):
 class ChatWindow(QMainWindow):
     def __init__(self, conn, username):
         super().__init__()
-        uic.loadUi("gui/gui.ui", self)
+        uic.loadUi(resource_path("assets/gui.ui"), self)
 
         self.conn     = conn
         self.username = username
