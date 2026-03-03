@@ -2,6 +2,7 @@ name: Build & Release ASPM
 
 
 on:
+  workflow_dispatch:  # Manuell auslösbar
   push:
     tags:
       - 'v*'
