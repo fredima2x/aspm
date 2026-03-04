@@ -71,7 +71,7 @@ jobs:
             sips -z 512 512   assets/logo.png --out app.iconset/icon_256x256@2x.png
             sips -z 512 512   assets/logo.png --out app.iconset/icon_512x512.png
             iconutil -c icns app.iconset -o app.icns
-          working-directory: fredima2x/aspm/client
+          working-directory: client
 
         - name: Bauen
           run: |
@@ -114,7 +114,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: fredima2x/aspm/client/installer_output/*.exe
+          path: client/installer_output/*.exe
 
   # ─── GitHub Release ─────────────────────────────────────
   release:
