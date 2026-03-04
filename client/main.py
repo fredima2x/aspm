@@ -397,7 +397,7 @@ class ChatWindow(QMainWindow):
         self.current_chat = current.text()
         self._clear_chat_display()
         
-        messages_json = self.conn.get_messages(self.current_chat) 
+        messages_json = self.conn.message_getall(self.current_chat) 
         messages = js.loads(messages_json) if messages_json else []
         for msg in messages:
             text = msg.get("content", "")
