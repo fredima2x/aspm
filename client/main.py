@@ -282,7 +282,7 @@ class ServerConnection:
 class LoginSignupDialog(QDialog):
     def __init__(self):
         super().__init__()
-        uic.loadUi(resource_path("assets/gui_login.ui"), self)
+        uic.loadUi(resource_path("assets/dep_login.ui"), self)
         self.conn = ServerConnection(server_host, server_port)
         self.username = None  # Gesetzt nach erfolgreichem Login/Signup
 
@@ -361,7 +361,7 @@ class ChatWindow(QMainWindow):
         super().__init__()
         try:
             log.info("ChatWindow: Lade UI...")
-            uic.loadUi(resource_path("assets/gui.ui"), self)
+            uic.loadUi(resource_path("assets/dep_gui.ui"), self)
             log.info("ChatWindow: UI geladen")
         except Exception as e:
             log.error(f"ChatWindow: Fehler beim Laden der UI: {e}", exc_info=True)
