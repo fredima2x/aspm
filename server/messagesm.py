@@ -113,6 +113,12 @@ class ClientHandler(threading.Thread):
                             self.logger.error("Incomplete get_user_id request")
                             continue
                         self.client_socket.sendall(f"user_id;{self.user_id}".encode())
+                    elif ready_message[0] == "get_user_info":
+                        if len(ready_message) < 2:
+                            self.logger.error("Incomplete get_user_info request")
+                            continue
+                        user_identifier = ready_message[1]
+                        self.get_user_info(user_identifier)
                     else:
                         self.logger.warning(f"Unknown command from {self.addr}: {ready_message[0]}")
                         self.client_socket.sendall("unknown_command".encode())
@@ -281,5 +287,17 @@ class ClientHandler(threading.Thread):
         except Exception as e:
             self.logger.error(f"Error deleting message {message_id}: {e}")
             self.client_socket.sendall("message_deletion_failed".encode())
+    def get_user_info(self, user_identifier):
+        try:
+            user_id = int(user_identifier)
+            user_info = self.db.get_user_by_id(user_id)
+        except ValueError:
+            user_info = self.db.get_user_by_nickname(user_identifier)
+
+        if user_info:
+            json_user_info = js.dumps(user_info)
+            self.client_socket.sendall(f"user_info;{json_user_info}".encode())
+        else:
+            self.client_socket.sendall("user_not_found".encode())
         
     

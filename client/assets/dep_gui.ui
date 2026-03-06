@@ -16,9 +16,9 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QHBoxLayout" name="main_layout">
       <item>
-       <widget class="QWidget" name="widget" native="true">
+       <widget class="QWidget" name="chat_side" native="true">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -78,7 +78,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QWidget" name="widget_2" native="true">
+       <widget class="QWidget" name="message_side" native="true">
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
           <widget class="QFrame" name="user_frame">

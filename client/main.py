@@ -24,7 +24,7 @@ server_port = None
 server_host = None
 servers = None
 
-
+_cache = {}  # Für eventuelle Caching-Optimierungen (z.B. Benutzerinfos)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Konfiguration
@@ -127,10 +127,14 @@ class ServerConnection:
             self.logger.info("Connection closed")
 
     def status(self):
-        if self.socket and self.socket.fileno() != -1:
+        try:
+            # Nicht-blockierend prüfen ob Socket noch offen
+            self.socket.getpeername()
             return True
-        return False
-        
+        except Exception:
+            return False
+
+
     def verify_credentials(self, username, password, sign_up=False):
         if not username or not password:
             self.logger.error("Username and password cannot be empty")
@@ -275,6 +279,21 @@ class ServerConnection:
         except Exception as e:
             self.logger.error(f"Error retrieving user ID: {e}")
             return None
+    
+    def get_user_info(self, user_identifier):
+        try:
+            self.socket.sendall(f"get_user_info;{user_identifier}".encode())
+            time.sleep(0.1)
+            response = self.socket.recv(4096).decode()
+            if response.startswith("user_info;"):
+                user_info = js.loads(response[10:])
+                self.logger.info(f"Retrieved user info for {user_identifier}: {user_info}")
+                return user_info
+            self.logger.warning(f"Invalid server response: {response}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error retrieving user info: {e}")
+            return None
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Login / Signup Dialog
@@ -335,8 +354,7 @@ class LoginSignupDialog(QDialog):
             self.enter_password_line.clear()
             self.repeat_password_line.clear()
             self.enter_password_line.setFocus()
-            return
-
+            return 
         response = self.conn.verify_credentials(username, password, sign_up=True)
         if response == "verified":
             USERNAME = username
@@ -346,7 +364,6 @@ class LoginSignupDialog(QDialog):
             self.conn.close()  # Neue Verbindung im ChatWindow mit gültigen Credentials
             self.accept()
         else:
-            # BUG FIX: Vorher wurde accept() auch bei Fehler aufgerufen
             QMessageBox.warning(self, "Registrierung fehlgeschlagen", f"Server: {response}")
             self.enter_password_line.clear()
             self.repeat_password_line.clear()
@@ -384,6 +401,8 @@ class ChatWindow(QMainWindow):
             log.error("ChatWindow: Verbindung zum Server fehlgeschlagen.")
             QMessageBox.critical(self, "Fehler", "Verbindung zum Server fehlgeschlagen.")
             sys.exit(1)
+
+        time.sleep(0.5)  # Kurze Pause, damit die Verbindung stabil ist
 
         try:
             self.conn.verify_credentials(self.username, self.password)
@@ -439,6 +458,11 @@ class ChatWindow(QMainWindow):
             self.msg_timer.setInterval(3000)
             self.msg_timer.timeout.connect(self._poll_messages)
             self.msg_timer.start()
+
+            self.conn_timer = QTimer(self)
+            self.conn_timer.setInterval(1000)
+            self.conn_timer.timeout.connect(self._check_connection)
+            self.conn_timer.start()
 
             self.chat_timer = QTimer(self)
             self.chat_timer.setInterval(30000)
@@ -521,18 +545,98 @@ class ChatWindow(QMainWindow):
         self.current_chat_id = current.data(Qt.UserRole)
         self.last_message_id = None  # Reset damit load_messages alles neu lädt
         self._clear_chat_display()
-        
-        messages_json = self.conn.get_messages(self.current_chat) 
-        messages = js.loads(messages_json) if messages_json else []
-        for msg in messages:
-            text = msg.get("content", "")
-            sender = msg.get("sender", "unknown")
-            received = (sender != self.current_user)
-            self._draw_bubble(f"{sender}: {text}", received)
+        self.load_messages()
 
-    # -------------------------------------------------------------------------
-    # Teilnehmer-Verwaltung
-    # -------------------------------------------------------------------------
+    # ── Nachrichten ────────────────────────────────────────────────────────
+
+    def load_messages(self):
+        """Lädt alle Nachrichten des aktuellen Chats und zeichnet sie (beim Chat-Wechsel)."""
+        if not self.current_chat_id:
+            return
+        messages = self.conn.message_getall(self.current_chat_id)
+        if messages is None:
+            QMessageBox.warning(self, "Fehler", "Nachrichten konnten nicht geladen werden.")
+            return
+
+        self.last_message_id = None
+
+        # Server gibt neueste Nachricht zuerst → umdrehen für chronologische Anzeige
+        for msg in reversed(messages):
+            self._render_message(msg)
+
+        # Höchste ID merken für späteres Polling
+        if messages:
+            self.last_message_id = messages[0]["message_id"]  # Index 0 = neueste
+
+    def _poll_messages(self):
+        """
+        Wird alle 3 Sekunden vom Timer aufgerufen.
+        Holt nur neue Nachrichten (nach last_message_id) und hängt sie an.
+        Kein komplettes Neuzeichnen – flackerfrei.
+        """
+        if not self.current_chat_id:
+            return
+        messages = self.conn.message_getall(self.current_chat_id)
+        if not messages:
+            return
+
+        newest_id = messages[0]["message_id"]
+
+        # Keine neuen Nachrichten → nichts tun
+        if self.last_message_id is not None and newest_id <= self.last_message_id:
+            return
+
+        # Nur Nachrichten zeichnen die neuer sind als die letzte bekannte
+        new_messages = [
+            msg for msg in messages
+            if self.last_message_id is None or msg["message_id"] > self.last_message_id
+        ]
+
+        # Chronologische Reihenfolge (älteste zuerst)
+        for msg in reversed(new_messages):
+            self._render_message(msg)
+
+        self.last_message_id = newest_id
+
+    def _render_message(self, msg):
+        """Zeichnet eine einzelne Nachricht vom Server als Bubble."""
+        sender_id = msg["sender_id"]
+        content   = msg["content"]
+        timestamp = msg.get("send_at", "")
+        is_own    = (self.my_sender_id is not None and sender_id == self.my_sender_id)
+
+
+        if not is_own:
+            if not f"user_info_{sender_id}" in _cache:
+                json_user_info = self.conn.get_user_info(sender_id)
+                user_info = json_user_info if isinstance(json_user_info, dict) else (js.loads(json_user_info) if json_user_info else {})
+                _cache[f"user_info_{sender_id}"] = user_info
+            else:
+                user_info = _cache[f"user_info_{sender_id}"]
+            sender_name = user_info.get("nickname", f"User #{sender_id}")
+
+
+        if is_own:
+            self._draw_bubble(content, received=False, timestamp=timestamp)
+        else:
+            self._draw_bubble(f"{sender_name}: {content}", received=True, timestamp=timestamp)
+
+    def send_message(self):
+        text = self.message_text.toPlainText().strip()
+        if not text:
+            return
+        if not self.current_chat_id:
+            QMessageBox.warning(self, "Kein Chat", "Bitte zuerst einen Chat auswählen.")
+            return
+
+        response = self.conn.message_new(self.current_chat_id, text)
+        if response == "message_saved":
+            self.message_text.clear()
+            self._poll_messages()
+        else:
+            QMessageBox.warning(self, "Fehler", f"Nachricht nicht gesendet.\nServer: {response}")
+
+    # ── Teilnehmer-Verwaltung ──────────────────────────────────────────────
 
     def add_user(self):
         if not self.current_chat_id:
@@ -630,6 +734,38 @@ class ChatWindow(QMainWindow):
         QTimer.singleShot(50, lambda: self.message_area.verticalScrollBar().setValue(
             self.message_area.verticalScrollBar().maximum()
         ))
+
+    def _check_connection(self):
+        """Überprüft die Verbindung zum Server. Bei Verbindungsfehlern wird der Benutzer informiert."""
+        log.debug("Überprüfe Serververbindung...")
+        if not self.conn.status():
+            log.warning("Verbindung zum Server verloren.")
+            QMessageBox.critical(self, "Verbindungsfehler", "Die Verbindung zum Server wurde unterbrochen.")
+            time.sleep(1)  # Kurze Pause, damit der Benutzer die Nachricht sieht
+            QMessageBox.information(self, "Reconnect", "Versuche, die Verbindung wiederherzustellen...")
+            self.conn.close()
+            while not self.conn.status():
+                try:
+                    self.conn = ServerConnection(server_host, server_port)
+                    if not self.conn.status():
+                        # Ask if user wants to retry
+                        retry = QMessageBox.question(
+                            self, "Reconnect fehlgeschlagen",
+                            "Verbindung konnte nicht wiederhergestellt werden. Nochmal versuchen?",
+                            QMessageBox.Yes | QMessageBox.No
+                        )                    
+                        if not retry == QMessageBox.Yes:
+                            sys.exit(1)
+                except Exception as e:
+                    log.error(f"Fehler beim erneuten Verbinden: {e}")
+            try:
+                self.conn.verify_credentials(self.username, self.password)
+            except Exception as e:
+                log.error(f"Fehler bei Verifizierungsanfrage nach Reconnect: {e}")
+                QMessageBox.critical(self, "Fehler", "Fehler bei Verifizierungsanfrage nach Reconnect.")
+                sys.exit(1)
+        log.debug("Serververbindung ist stabil.")
+        
 
     def _clear_chat_display(self):
         """Leert die ScrollArea visuell ohne Daten zu verlieren."""
