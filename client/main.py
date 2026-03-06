@@ -758,13 +758,14 @@ class ChatWindow(QMainWindow):
                             sys.exit(1)
                 except Exception as e:
                     log.error(f"Fehler beim erneuten Verbinden: {e}")
+            try:
+                self.conn.verify_credentials(self.username, self.password)
+            except Exception as e:
+                log.error(f"Fehler bei Verifizierungsanfrage nach Reconnect: {e}")
+                QMessageBox.critical(self, "Fehler", "Fehler bei Verifizierungsanfrage nach Reconnect.")
+                sys.exit(1)
         log.debug("Serververbindung ist stabil.")
-        try:
-            self.conn.verify_credentials(self.username, self.password)
-        except Exception as e:
-            log.error(f"Fehler bei Verifizierungsanfrage nach Reconnect: {e}")
-            QMessageBox.critical(self, "Fehler", "Fehler bei Verifizierungsanfrage nach Reconnect.")
-            sys.exit(1)
+        
 
     def _clear_chat_display(self):
         """Leert die ScrollArea visuell ohne Daten zu verlieren."""
