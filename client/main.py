@@ -24,7 +24,7 @@ server_port = None
 server_host = None
 servers = None
 
-
+_cache = {}  # Für eventuelle Caching-Optimierungen (z.B. Benutzerinfos)
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Konfiguration
@@ -274,6 +274,21 @@ class ServerConnection:
             return None
         except Exception as e:
             self.logger.error(f"Error retrieving user ID: {e}")
+            return None
+    
+    def get_user_info(self, user_identifier):
+        try:
+            self.socket.sendall(f"get_user_info;{user_identifier}".encode())
+            time.sleep(0.1)
+            response = self.socket.recv(4096).decode()
+            if response.startswith("user_info;"):
+                user_info = js.loads(response[10:])
+                self.logger.info(f"Retrieved user info for {user_identifier}: {user_info}")
+                return user_info
+            self.logger.warning(f"Invalid server response: {response}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error retrieving user info: {e}")
             return None
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -579,10 +594,21 @@ class ChatWindow(QMainWindow):
         timestamp = msg.get("send_at", "")
         is_own    = (self.my_sender_id is not None and sender_id == self.my_sender_id)
 
+
+        if not is_own:
+            if not f"user_info_{sender_id}" in _cache:
+                json_user_info = self.conn.get_user_info(sender_id)
+                user_info = json_user_info if isinstance(json_user_info, dict) else (js.loads(json_user_info) if json_user_info else {})
+                _cache[f"user_info_{sender_id}"] = user_info
+            else:
+                user_info = _cache[f"user_info_{sender_id}"]
+            sender_name = user_info.get("nickname", f"User #{sender_id}")
+
+
         if is_own:
             self._draw_bubble(content, received=False, timestamp=timestamp)
         else:
-            self._draw_bubble(f"User #{sender_id}: {content}", received=True, timestamp=timestamp)
+            self._draw_bubble(f"{sender_name}: {content}", received=True, timestamp=timestamp)
 
     def send_message(self):
         text = self.message_text.toPlainText().strip()

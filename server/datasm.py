@@ -303,7 +303,7 @@ class DatabaseManager:
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "SELECT user_id, nickname, properties FROM users WHERE nickname = ?",
+                "SELECT user_id, nickname, properties, created_at FROM users WHERE nickname = ?",
                 (nickname,)
             )
             result = cursor.fetchone()
@@ -311,7 +311,8 @@ class DatabaseManager:
                 return {
                     'user_id': result[0],
                     'nickname': result[1],
-                    'properties': result[2]
+                    'properties': result[2],
+                    'created_at': result[3]
                 }
             return None
         finally:
