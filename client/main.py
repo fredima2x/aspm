@@ -127,10 +127,17 @@ class ServerConnection:
             self.logger.info("Connection closed")
 
     def status(self):
-        if self.socket and self.socket.fileno() != -1:
+        try:
+            data = self.socket.recv(1024)
+            if not data:
+                self.logger.info("Verbindung getrennt")
+                return False
+            self.logger.debug(f"Verbindungsstatus: OK (empfangen: {data.decode()})")
             return True
-        return False
-        
+        except Exception as e:
+            self.logger.error(f"Fehler beim Überprüfen des Verbindungsstatus: {e}")
+            return False
+
     def verify_credentials(self, username, password, sign_up=False):
         if not username or not password:
             self.logger.error("Username and password cannot be empty")
@@ -731,17 +738,22 @@ class ChatWindow(QMainWindow):
 
     def _check_connection(self):
         """Überprüft die Verbindung zum Server. Bei Verbindungsfehlern wird der Benutzer informiert."""
+        log.debug("Überprüfe Serververbindung...")
         if not self.conn.status():
             log.warning("Verbindung zum Server verloren.")
             QMessageBox.critical(self, "Verbindungsfehler", "Die Verbindung zum Server wurde unterbrochen.")
             time.sleep(1)  # Kurze Pause, damit der Benutzer die Nachricht sieht
             QMessageBox.information(self, "Reconnect", "Versuche, die Verbindung wiederherzustellen...")
             self.conn.close()
-            self.conn = ServerConnection(server_host, server_port)
-            if not self.conn.status():
-                log.error("Reconnect fehlgeschlagen. Bitte Anwendung neu starten.")
-                QMessageBox.critical(self, "Reconnect fehlgeschlagen", "Die Verbindung konnte nicht wiederhergestellt werden. Bitte Anwendung neu starten.")
-            self.close()
+            try:
+                self.conn = ServerConnection(server_host, server_port)
+                if not self.conn.status():
+                    log.error("Reconnect fehlgeschlagen. Bitte Anwendung neu starten.")
+                    QMessageBox.critical(self, "Reconnect fehlgeschlagen", "Die Verbindung konnte nicht wiederhergestellt werden. Bitte Anwendung neu starten.")
+                    self.close()
+            except Exception as e:
+                log.error(f"Fehler beim erneuten Verbinden: {e}")
+        log.debug("Serververbindung ist stabil.")
 
     def _clear_chat_display(self):
         """Leert die ScrollArea visuell ohne Daten zu verlieren."""
