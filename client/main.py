@@ -453,6 +453,11 @@ class ChatWindow(QMainWindow):
             self.msg_timer.timeout.connect(self._poll_messages)
             self.msg_timer.start()
 
+            self.conn_timer = QTimer(self)
+            self.conn_timer.setInterval(1000)
+            self.conn_timer.timeout.connect(self._check_connection)
+            self.conn_timer.start()
+
             self.chat_timer = QTimer(self)
             self.chat_timer.setInterval(30000)
             self.chat_timer.timeout.connect(self.load_chat_list)
@@ -723,6 +728,20 @@ class ChatWindow(QMainWindow):
         QTimer.singleShot(50, lambda: self.message_area.verticalScrollBar().setValue(
             self.message_area.verticalScrollBar().maximum()
         ))
+
+    def _check_connection(self):
+        """Überprüft die Verbindung zum Server. Bei Verbindungsfehlern wird der Benutzer informiert."""
+        if not self.conn.status():
+            log.warning("Verbindung zum Server verloren.")
+            QMessageBox.critical(self, "Verbindungsfehler", "Die Verbindung zum Server wurde unterbrochen.")
+            time.sleep(1)  # Kurze Pause, damit der Benutzer die Nachricht sieht
+            QMessageBox.information(self, "Reconnect", "Versuche, die Verbindung wiederherzustellen...")
+            self.conn.close()
+            self.conn = ServerConnection(server_host, server_port)
+            if not self.conn.status():
+                log.error("Reconnect fehlgeschlagen. Bitte Anwendung neu starten.")
+                QMessageBox.critical(self, "Reconnect fehlgeschlagen", "Die Verbindung konnte nicht wiederhergestellt werden. Bitte Anwendung neu starten.")
+            self.close()
 
     def _clear_chat_display(self):
         """Leert die ScrollArea visuell ohne Daten zu verlieren."""
