@@ -109,16 +109,10 @@ def init_server(host, port):
     if ENCRYPTION_ENABLED:
         ensure_certificates()
         threading.Thread(target=serve_certificate, daemon=True, args=(CERT_SERVER_PORT,)).start()
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-        context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
-        raw_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        raw_sock.bind((host, port))
-        raw_sock.listen(5)
-        server_sock = context.wrap_socket(raw_sock, server_side=True)
-    else:
-        server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_sock.bind((host, port))
-        server_sock.listen(5)
+    
+    server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_sock.bind((host, port))
+    server_sock.listen(5)
     logger.info(f"Server lauscht auf {host}:{port}")
     return server_sock
 
@@ -127,6 +121,15 @@ def main():
     server_socket = init_server(BIND_TO, SERVER_PORT)
     while True:
         client_socket, addr = server_socket.accept()
+        if ENCRYPTION_ENABLED:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(certfile=CERT_PATH, keyfile=KEY_PATH)
+            try:
+                client_socket = context.wrap_socket(client_socket, server_side=True)
+            except ssl.SSLError as e:
+                logger.error(f"SSL handshake failed with {addr}: {e}")
+                client_socket.close()
+                continue
         client_handler = messagesm.ClientHandler(client_socket, addr, clients, clients_lock, clients_data, clients_data_lock)
         client_handler.start()
     
