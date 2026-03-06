@@ -128,15 +128,12 @@ class ServerConnection:
 
     def status(self):
         try:
-            data = self.socket.recv(1024)
-            if not data:
-                self.logger.info("Verbindung getrennt")
-                return False
-            self.logger.debug(f"Verbindungsstatus: OK (empfangen: {data.decode()})")
+            # Nicht-blockierend prüfen ob Socket noch offen
+            self.socket.getpeername()
             return True
-        except Exception as e:
-            self.logger.error(f"Fehler beim Überprüfen des Verbindungsstatus: {e}")
+        except Exception:
             return False
+
 
     def verify_credentials(self, username, password, sign_up=False):
         if not username or not password:
@@ -404,6 +401,8 @@ class ChatWindow(QMainWindow):
             log.error("ChatWindow: Verbindung zum Server fehlgeschlagen.")
             QMessageBox.critical(self, "Fehler", "Verbindung zum Server fehlgeschlagen.")
             sys.exit(1)
+
+        time.sleep(0.5)  # Kurze Pause, damit die Verbindung stabil ist
 
         try:
             self.conn.verify_credentials(self.username, self.password)
