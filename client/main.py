@@ -282,7 +282,7 @@ class ServerConnection:
 class LoginSignupDialog(QDialog):
     def __init__(self):
         super().__init__()
-        uic.loadUi(resource_path("assets/gui_login.ui"), self)
+        uic.loadUi(resource_path("assets/dep_login.ui"), self)
         self.conn = ServerConnection(server_host, server_port)
         self.username = None  # Gesetzt nach erfolgreichem Login/Signup
 
@@ -361,7 +361,7 @@ class ChatWindow(QMainWindow):
         super().__init__()
         try:
             log.info("ChatWindow: Lade UI...")
-            uic.loadUi(resource_path("assets/gui.ui"), self)
+            uic.loadUi(resource_path("assets/dep_gui.ui"), self)
             log.info("ChatWindow: UI geladen")
         except Exception as e:
             log.error(f"ChatWindow: Fehler beim Laden der UI: {e}", exc_info=True)
@@ -521,87 +521,18 @@ class ChatWindow(QMainWindow):
         self.current_chat_id = current.data(Qt.UserRole)
         self.last_message_id = None  # Reset damit load_messages alles neu lädt
         self._clear_chat_display()
-        self.load_messages()
+        
+        messages_json = self.conn.get_messages(self.current_chat) 
+        messages = js.loads(messages_json) if messages_json else []
+        for msg in messages:
+            text = msg.get("content", "")
+            sender = msg.get("sender", "unknown")
+            received = (sender != self.current_user)
+            self._draw_bubble(f"{sender}: {text}", received)
 
-    # ── Nachrichten ────────────────────────────────────────────────────────
-
-    def load_messages(self):
-        """Lädt alle Nachrichten des aktuellen Chats und zeichnet sie (beim Chat-Wechsel)."""
-        if not self.current_chat_id:
-            return
-        messages = self.conn.message_getall(self.current_chat_id)
-        if messages is None:
-            QMessageBox.warning(self, "Fehler", "Nachrichten konnten nicht geladen werden.")
-            return
-
-        self.last_message_id = None
-
-        # Server gibt neueste Nachricht zuerst → umdrehen für chronologische Anzeige
-        for msg in reversed(messages):
-            self._render_message(msg)
-
-        # Höchste ID merken für späteres Polling
-        if messages:
-            self.last_message_id = messages[0]["message_id"]  # Index 0 = neueste
-
-    def _poll_messages(self):
-        """
-        Wird alle 3 Sekunden vom Timer aufgerufen.
-        Holt nur neue Nachrichten (nach last_message_id) und hängt sie an.
-        Kein komplettes Neuzeichnen – flackerfrei.
-        """
-        if not self.current_chat_id:
-            return
-        messages = self.conn.message_getall(self.current_chat_id)
-        if not messages:
-            return
-
-        newest_id = messages[0]["message_id"]
-
-        # Keine neuen Nachrichten → nichts tun
-        if self.last_message_id is not None and newest_id <= self.last_message_id:
-            return
-
-        # Nur Nachrichten zeichnen die neuer sind als die letzte bekannte
-        new_messages = [
-            msg for msg in messages
-            if self.last_message_id is None or msg["message_id"] > self.last_message_id
-        ]
-
-        # Chronologische Reihenfolge (älteste zuerst)
-        for msg in reversed(new_messages):
-            self._render_message(msg)
-
-        self.last_message_id = newest_id
-
-    def _render_message(self, msg):
-        """Zeichnet eine einzelne Nachricht vom Server als Bubble."""
-        sender_id = msg["sender_id"]
-        content   = msg["content"]
-        timestamp = msg.get("send_at", "")
-        is_own    = (self.my_sender_id is not None and sender_id == self.my_sender_id)
-
-        if is_own:
-            self._draw_bubble(content, received=False, timestamp=timestamp)
-        else:
-            self._draw_bubble(f"User #{sender_id}: {content}", received=True, timestamp=timestamp)
-
-    def send_message(self):
-        text = self.message_text.toPlainText().strip()
-        if not text:
-            return
-        if not self.current_chat_id:
-            QMessageBox.warning(self, "Kein Chat", "Bitte zuerst einen Chat auswählen.")
-            return
-
-        response = self.conn.message_new(self.current_chat_id, text)
-        if response == "message_saved":
-            self.message_text.clear()
-            self._poll_messages()
-        else:
-            QMessageBox.warning(self, "Fehler", f"Nachricht nicht gesendet.\nServer: {response}")
-
-    # ── Teilnehmer-Verwaltung ──────────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # Teilnehmer-Verwaltung
+    # -------------------------------------------------------------------------
 
     def add_user(self):
         if not self.current_chat_id:
