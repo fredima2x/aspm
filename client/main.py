@@ -744,14 +744,20 @@ class ChatWindow(QMainWindow):
             time.sleep(1)  # Kurze Pause, damit der Benutzer die Nachricht sieht
             QMessageBox.information(self, "Reconnect", "Versuche, die Verbindung wiederherzustellen...")
             self.conn.close()
-            try:
-                self.conn = ServerConnection(server_host, server_port)
-                if not self.conn.status():
-                    log.error("Reconnect fehlgeschlagen. Bitte Anwendung neu starten.")
-                    QMessageBox.critical(self, "Reconnect fehlgeschlagen", "Die Verbindung konnte nicht wiederhergestellt werden. Bitte Anwendung neu starten.")
-                    self.close()
-            except Exception as e:
-                log.error(f"Fehler beim erneuten Verbinden: {e}")
+            while not self.conn.status():
+                try:
+                    self.conn = ServerConnection(server_host, server_port)
+                    if not self.conn.status():
+                        # Ask if user wants to retry
+                        retry = QMessageBox.question(
+                            self, "Reconnect fehlgeschlagen",
+                            "Verbindung konnte nicht wiederhergestellt werden. Nochmal versuchen?",
+                            QMessageBox.Yes | QMessageBox.No
+                        )                    
+                        if not retry == QMessageBox.Yes:
+                            sys.exit(1)
+                except Exception as e:
+                    log.error(f"Fehler beim erneuten Verbinden: {e}")
         log.debug("Serververbindung ist stabil.")
 
     def _clear_chat_display(self):
