@@ -1,3 +1,10 @@
+
+VERSION = "1.12.1-8"
+VERSION_SIMPLE = "1.12.1"
+VERSIONS_COMPATIBILITY = {
+    "1.12.1": ["*"],
+}
+
 import socket
 import threading
 import json

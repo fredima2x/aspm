@@ -1,4 +1,10 @@
-#!/bin/python
+
+VERSION = "1.12.1-8"
+VERSION_SIMPLE = "1.12.1"
+VERSIONS_COMPATIBILITY = {
+    "1.12.1": ["1.12.1-8", "1.12.1-7", "1.12.1-6", "1.12.1-5", "1.12.1-4", "1.12.1-3", "1.12.1-2", "1.12.1-1"],
+}
+
 import socket
 import subprocess
 import sys
