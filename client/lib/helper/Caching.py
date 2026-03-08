@@ -1,4 +1,4 @@
-import lib.normals as normals
+import lib.core.normals as normals
 import os
 import json
 import time

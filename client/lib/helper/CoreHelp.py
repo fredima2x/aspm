@@ -5,7 +5,7 @@ import time
 import json as js
 import logging as log   
 
-import lib.normals as normals
+import lib.core.normals as normals
 
 
 log.basicConfig(level=log.INFO)

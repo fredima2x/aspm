@@ -1,4 +1,4 @@
-from lib.ServerConnection import ServerConnection
+import lib.core.ServerConnection as ServerConnection
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +41,9 @@ def run_cli(server_host, server_port, cert_port):
             msg_id = input("Enter message ID: ")
             if input(f"Nachricht {msg_id} löschen? (yes/no): ").lower() == "yes":
                 print(conn.delete_message(msg_id))
+        elif command == "search_user":
+            query = input("Enter username: ")
+            print(str(conn.search_users(str(query))))
         elif command == "help":
             print("Befehle: list, create, send, get, adduser, rmuser, "
                "signup, login, delete_account, delete_chat, delete_message, quit")
