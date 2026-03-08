@@ -1,4 +1,4 @@
-from lib.ServerConnection import ServerConnection
+from client.lib.core.ServerConnection import ServerConnection
 import logging
 
 logging.basicConfig(level=logging.INFO)

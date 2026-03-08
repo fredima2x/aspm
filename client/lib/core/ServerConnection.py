@@ -5,7 +5,7 @@ import time
 import logging
 import os
 
-import lib.normals as normals
+import client.lib.core.normals as normals
 
 def fetch_certificate(host, port=normals.cert_port):
     if os.path.exists(normals.CERT_PATH):
@@ -224,4 +224,18 @@ class ServerConnection:
             return None
         except Exception as e:
             self.logger.error(f"Error retrieving user info: {e}")
+            return None
+    def search_users(self, query):
+        try:
+            self.socket.sendall(f"search_users;{query}".encode())
+            time.sleep(0.1)
+            response = self.socket.recv(4096).decode()
+            if response.startswith("search_results;"):
+                results = js.loads(response[15:])
+                self.logger.info(f"Search for '{query}' returned {len(results)} results")
+                return results
+            self.logger.warning(f"Invalid server response: {response}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error searching users: {e}")
             return None

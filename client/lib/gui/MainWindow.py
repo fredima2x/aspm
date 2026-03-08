@@ -10,9 +10,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QEvent, QTimer
 from PyQt5 import uic
 
-import lib.ServerConnection as ServerConnection
-import lib.normals as normals
-from lib.CoreHelp import resource_path
+import client.lib.core.ServerConnection as ServerConnection
+import client.lib.core.normals as normals
+from client.lib.helper.CoreHelp import resource_path
 
 class ChatWindow(QMainWindow):
     def __init__(self):
@@ -284,7 +284,9 @@ class ChatWindow(QMainWindow):
         if not self.current_chat_id:
             QMessageBox.warning(self, "Kein Chat", "Bitte zuerst einen Chat auswählen.")
             return
-        username, ok = QInputDialog.getText(self, "Nutzer hinzufügen", "Benutzername:")
+        
+
+
         if not ok or not username.strip():
             return
         response = self.conn.group_useradd(self.current_chat_id, username.strip())

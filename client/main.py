@@ -12,11 +12,11 @@ import time
 import json as js
 import logging
 
-import lib.CliInterface as CliInterface
-import lib.LoginDialogue as LoginDialogue
-import lib.MainWindow as MainWindow
-import lib.normals as normals
-import lib.Caching as Caching
+import lib.core.CliInterface as CliInterface
+import lib.gui.LoginDialogue as LoginDialogue
+import lib.gui.MainWindow as MainWindow
+import lib.core.normals as normals
+import lib.helper.Caching as Caching
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QDialog, QLabel,

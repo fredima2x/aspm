@@ -119,6 +119,12 @@ class ClientHandler(threading.Thread):
                             continue
                         user_identifier = ready_message[1]
                         self.get_user_info(user_identifier)
+                    elif ready_message[0] == "search_users":
+                        if len(ready_message) < 2:
+                            self.logger.error("Incomplete search user request")
+                            continue
+                        query = ready_message[1]
+                        self.search_user(query)
                     else:
                         self.logger.warning(f"Unknown command from {self.addr}: {ready_message[0]}")
                         self.client_socket.sendall("unknown_command".encode())
@@ -299,5 +305,16 @@ class ClientHandler(threading.Thread):
             self.client_socket.sendall(f"user_info;{json_user_info}".encode())
         else:
             self.client_socket.sendall("user_not_found".encode())
+    def search_user(self, query):
+        try:
+            result = self.db.search_users(str(query))
+        except:
+            self.logger.critical("Database Error")
+        json_result = js.dumps(result)
+        try:
+            self.client_socket.sendall(f"search_results;{json_result}")
+        except:
+            self.logger.critical("Connection Error!")
+
         
     
