@@ -1,0 +1,118 @@
+/* === Globale Basis === */
+QMainWindow, QDialog, QWidget {
+    background-color: #1e1e2e;
+    color: #cdd6f4;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 13px;
+}
+
+/* === Sidebar (Chat-Liste) === */
+QListWidget {
+    background-color: #181825;
+    border: none;
+    border-radius: 8px;
+    padding: 4px;
+}
+QListWidget::item {
+    padding: 10px 8px;
+    border-radius: 6px;
+    margin: 2px 0;
+}
+QListWidget::item:hover {
+    background-color: #313244;
+}
+QListWidget::item:selected {
+    background-color: #89b4fa;
+    color: #1e1e2e;
+}
+
+/* === Eingabefelder === */
+QPlainTextEdit, QLineEdit {
+    background-color: #313244;
+    border: 1px solid #45475a;
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #cdd6f4;
+}
+QPlainTextEdit:focus, QLineEdit:focus {
+    border: 1px solid #89b4fa;
+}
+
+/* === Buttons === */
+QPushButton {
+    background-color: #313244;
+    color: #cdd6f4;
+    border: 1px solid #45475a;
+    border-radius: 6px;
+    padding: 6px 14px;
+}
+QPushButton:hover {
+    background-color: #45475a;
+    border-color: #89b4fa;
+}
+QPushButton:pressed {
+    background-color: #89b4fa;
+    color: #1e1e2e;
+}
+
+/* === ScrollArea === */
+QScrollArea {
+    border: none;
+    background-color: transparent;
+}
+QScrollBar:vertical {
+    background-color: #181825;
+    width: 8px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical {
+    background-color: #45475a;
+    border-radius: 4px;
+    min-height: 20px;
+}
+QScrollBar::handle:vertical:hover {
+    background-color: #89b4fa;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* === Menüleiste === */
+QMenuBar {
+    background-color: #181825;
+    border-bottom: 1px solid #313244;
+    padding: 2px;
+}
+QMenuBar::item {
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+QMenuBar::item:selected {
+    background-color: #313244;
+}
+QMenu {
+    background-color: #1e1e2e;
+    border: 1px solid #45475a;
+    border-radius: 8px;
+    padding: 4px;
+}
+QMenu::item {
+    padding: 6px 20px;
+    border-radius: 4px;
+}
+QMenu::item:selected {
+    background-color: #89b4fa;
+    color: #1e1e2e;
+}
+
+/* === Statusbar === */
+QStatusBar {
+    background-color: #181825;
+    color: #6c7086;
+    border-top: 1px solid #313244;
+}
+
+/* === QFrame Trenner === */
+QFrame[frameShape="4"], QFrame[frameShape="5"] {
+    color: #313244;
+}

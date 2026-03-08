@@ -14,6 +14,7 @@ import lib.gui.SearchWindow as SearchWindow
 import lib.core.ServerConnection as ServerConnection
 import lib.core.normals as normals
 from lib.helper.CoreHelp import resource_path
+from lib.gui.SmoothScrollArea import SmoothScrollArea
 
 class ChatWindow(QMainWindow):
     def __init__(self):
@@ -89,7 +90,7 @@ class ChatWindow(QMainWindow):
 
         try:
             self.log.info("ChatWindow: Lade Chatliste...")
-            self.load_chat_list()
+            self.load_chat_list(initial=True)
             self.log.info("ChatWindow: Chatliste geladen")
         except Exception as e:
             self.log.error(f"ChatWindow: Fehler beim Laden der Chatliste: {e}", exc_info=True)
@@ -108,9 +109,10 @@ class ChatWindow(QMainWindow):
             self.conn_timer.start()
 
             self.chat_timer = QTimer(self)
-            self.chat_timer.setInterval(30000)
+            self.chat_timer.setInterval(15000)
             self.chat_timer.timeout.connect(self.load_chat_list)
             self.chat_timer.start()
+
             self.log.info("ChatWindow: Timer gestartet")
         except Exception as e:
             self.log.error(f"ChatWindow: Fehler beim Starten der Timer: {e}", exc_info=True)
@@ -120,7 +122,7 @@ class ChatWindow(QMainWindow):
 
     # ── Chatliste ──────────────────────────────────────────────────────────
 
-    def load_chat_list(self):
+    def load_chat_list(self, initial=False):
         """Lädt alle Chats vom Server und füllt die Sidebar."""
         chats = self.conn.group_list()
         if chats is None:
@@ -129,17 +131,18 @@ class ChatWindow(QMainWindow):
 
         previously_selected_id = self.current_chat_id
 
-        # blockSignals verhindert dass switch_chat für jeden addItem feuert
         self.listWidget.blockSignals(True)
         self.listWidget.clear()
 
         for chat in chats:
-            # Server: {"chat_id":1, "creator_id":1, "members":[1,2], ...}
-            # Kein Name vorhanden → Chat #ID anzeigen
             chat_id      = chat["chat_id"]
-            member_count = len(chat.get("members", []))
+            members      = chat.get("members", [])
+            member_count = len(members)
+
+            # Member-Liste am Item speichern (UserRole+1)
             item = QListWidgetItem(f"Chat #{chat_id}  ({member_count} Mitglieder)")
-            item.setData(Qt.UserRole, chat_id)
+            item.setData(Qt.UserRole,     chat_id)
+            item.setData(Qt.UserRole + 1, members)   # ← Member-IDs mitspeichern
             self.listWidget.addItem(item)
 
             if chat_id == previously_selected_id:
@@ -147,9 +150,40 @@ class ChatWindow(QMainWindow):
 
         self.listWidget.blockSignals(False)
 
-        # Falls nichts ausgewählt, erstes Element wählen
         if self.listWidget.currentItem() is None and self.listWidget.count() > 0:
             self.listWidget.setCurrentRow(0)
+
+        # Rechte Liste für aktuell gewählten Chat befüllen
+        current = self.listWidget.currentItem()
+        if current:
+            self._populate_user_list(current.data(Qt.UserRole + 1))
+
+
+    def _populate_user_list(self, member_ids: list):
+        """Zeigt alle User des aktuellen Chats in der rechten ScrollArea."""
+        # Layout einmalig anlegen
+        if not hasattr(self, '_user_list_layout'):
+            self._user_list_layout = QVBoxLayout()
+            self._user_list_layout.setAlignment(Qt.AlignTop)
+            self.scrollAreaWidgetContents_2.setLayout(self._user_list_layout)
+
+        # Alte Einträge leeren
+        while self._user_list_layout.count():
+            item = self._user_list_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        for user_id in member_ids:
+            try:
+                info = self.conn.get_user_info(user_id)    # {"user_id":..., "nickname":...}
+                nickname = info.get("nickname", f"User #{user_id}") if info else f"User #{user_id}"
+            except Exception:
+                nickname = f"User #{user_id}"
+
+            label = QLabel(f"👤  {nickname}")
+            label.setStyleSheet("padding: 4px 8px;")
+            self._user_list_layout.addWidget(label)
+
 
     # ── Chat-Verwaltung ────────────────────────────────────────────────────
 
@@ -417,7 +451,6 @@ class ChatWindow(QMainWindow):
                 sys.exit(1)
         self.log.debug("Serververbindung ist stabil.")
         
-
     def _clear_chat_display(self):
         """Leert die ScrollArea visuell ohne Daten zu verlieren."""
         while self.chat_layout.count():

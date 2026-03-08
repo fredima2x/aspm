@@ -6,16 +6,16 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>768</width>
-    <height>563</height>
+    <width>983</width>
+    <height>572</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_2">
-    <item>
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
      <layout class="QHBoxLayout" name="main_layout">
       <item>
        <widget class="QWidget" name="chat_side" native="true">
@@ -81,33 +81,7 @@
        <widget class="QWidget" name="message_side" native="true">
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
-          <widget class="QFrame" name="user_frame">
-           <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
-           </property>
-           <property name="frameShadow">
-            <enum>QFrame::Raised</enum>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayout_5">
-            <item>
-             <widget class="QPushButton" name="adduser_button">
-              <property name="text">
-               <string>Add user...</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="rmuser_button">
-              <property name="text">
-               <string>Remove user...</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QScrollArea" name="message_area">
+          <widget class="SmoothScrollArea" name="message_area">
            <property name="widgetResizable">
             <bool>true</bool>
            </property>
@@ -117,7 +91,7 @@
               <x>0</x>
               <y>0</y>
               <width>502</width>
-              <height>381</height>
+              <height>417</height>
              </rect>
             </property>
            </widget>
@@ -157,11 +131,66 @@
             <item>
              <widget class="QPushButton" name="send_button">
               <property name="text">
-               <string>PushButton</string>
+               <string>Send...</string>
               </property>
              </widget>
             </item>
            </layout>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
+       <widget class="QWidget" name="user_area" native="true">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QFrame" name="user_frame">
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Raised</enum>
+           </property>
+           <layout class="QHBoxLayout" name="horizontalLayout_5">
+            <item>
+             <widget class="QPushButton" name="adduser_button">
+              <property name="text">
+               <string>Add user...</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="rmuser_button">
+              <property name="text">
+               <string>Remove user...</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="SmoothScrollArea" name="user_list">
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="scrollAreaWidgetContents_2">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>189</width>
+              <height>445</height>
+             </rect>
+            </property>
+           </widget>
           </widget>
          </item>
         </layout>
@@ -172,12 +201,83 @@
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>983</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuSettings">
+    <property name="title">
+     <string>Settings</string>
+    </property>
+    <widget class="QMenu" name="menuConnection">
+     <property name="title">
+      <string>Connection</string>
+     </property>
+     <addaction name="actionServer_Connection"/>
+     <addaction name="actionMirror_Connection"/>
+    </widget>
+    <addaction name="actionAccounts"/>
+    <addaction name="menuConnection"/>
+   </widget>
+   <widget class="QMenu" name="menuASPM">
+    <property name="title">
+     <string>ASPM</string>
+    </property>
+    <addaction name="actionQuit"/>
+   </widget>
+   <addaction name="menuASPM"/>
+   <addaction name="menuSettings"/>
+  </widget>
   <action name="actionAccount">
    <property name="text">
     <string>Account</string>
    </property>
   </action>
+  <action name="actionAccounts">
+   <property name="text">
+    <string>Accounts</string>
+   </property>
+  </action>
+  <action name="actionServer_Connection">
+   <property name="text">
+    <string>Server Connection</string>
+   </property>
+  </action>
+  <action name="actionMirror_Connection">
+   <property name="text">
+    <string>Mirror Connection</string>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>Quit</string>
+   </property>
+  </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>SmoothScrollArea</class>
+   <extends>QScrollArea</extends>
+   <header>lib.gui.SmoothScrollArea</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>message_text</tabstop>
+  <tabstop>send_button</tabstop>
+  <tabstop>rmchat_button</tabstop>
+  <tabstop>addchat_button</tabstop>
+  <tabstop>adduser_button</tabstop>
+  <tabstop>rmuser_button</tabstop>
+  <tabstop>listWidget</tabstop>
+  <tabstop>message_area</tabstop>
+  <tabstop>user_list</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

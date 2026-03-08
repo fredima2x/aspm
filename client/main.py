@@ -17,6 +17,7 @@ import lib.gui.LoginDialogue as LoginDialogue
 import lib.gui.MainWindow as MainWindow
 import lib.core.normals as normals
 import lib.helper.Caching as Caching
+import lib.helper.CoreHelp as CoreHelp
 
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QDialog, QLabel,
@@ -46,6 +47,12 @@ def INIT():
         format="%(asctime)s - %(levelname)s - %(message)s"
     )
     log = logging.getLogger(__name__)
+
+def load_stylesheet(app):
+    path = CoreHelp.resource_path("assets/style.qss")
+    with open(path, "r") as f:
+        app.setStyleSheet(f.read())
+
 
 def get_server_info():
     try:
@@ -93,7 +100,7 @@ def main():
 
     if GUI_ENABLED:
         app = QApplication(sys.argv)
-
+        load_stylesheet(app)
         dialog = LoginDialogue.LoginSignupDialog()
         if dialog.exec_() != QDialog.Accepted:
             sys.exit(0)
