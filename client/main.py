@@ -30,8 +30,8 @@ from PyQt5 import uic
 # ─────────────────────────────────────────────────────────────────────────────
 #  Konfiguration
 # ─────────────────────────────────────────────────────────────────────────────
-MIRROR_SERVER_HOST = "localhost"
-MIRROR_SERVER_PORT = 8282
+MIRROR_SERVER_HOST = normals.MIRROR_SERVER_HOST
+MIRROR_SERVER_PORT = normals.MIRROR_SERVER_PORT
 GUI_ENABLED = True
 normals._servers = []
 
