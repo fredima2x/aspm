@@ -12,10 +12,8 @@ log.basicConfig(level=log.INFO)
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
-        # PyInstaller
         base = sys._MEIPASS
     else:
-        # Immer relativ zu main.py – egal von wo gestartet wird
         base = os.path.dirname(os.path.abspath(sys.argv[0]))
     return os.path.join(base, relative_path)
 
