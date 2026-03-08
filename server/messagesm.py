@@ -312,7 +312,7 @@ class ClientHandler(threading.Thread):
             self.logger.critical("Database Error")
         json_result = js.dumps(result)
         try:
-            self.client_socket.sendall(f"search_results;{json_result}")
+            self.client_socket.sendall(f"search_results;{json_result}".encode())
         except:
             self.logger.critical("Connection Error!")
 

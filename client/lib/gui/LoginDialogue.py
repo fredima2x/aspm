@@ -6,9 +6,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QEvent, QTimer
 from PyQt5 import uic
 
-import client.lib.core.ServerConnection as ServerConnection
-import client.lib.helper.CoreHelp as CoreHelp
-import client.lib.core.normals as normals
+import lib.core.ServerConnection as ServerConnection
+import lib.helper.CoreHelp as CoreHelp
+import lib.core.normals as normals
 
 class LoginSignupDialog(QDialog):
     def __init__(self):

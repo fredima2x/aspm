@@ -10,9 +10,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QEvent, QTimer
 from PyQt5 import uic
 
-import client.lib.core.ServerConnection as ServerConnection
-import client.lib.core.normals as normals
-from client.lib.helper.CoreHelp import resource_path
+import lib.gui.SearchWindow as SearchWindow
+import lib.core.ServerConnection as ServerConnection
+import lib.core.normals as normals
+from lib.helper.CoreHelp import resource_path
 
 class ChatWindow(QMainWindow):
     def __init__(self):
@@ -285,7 +286,13 @@ class ChatWindow(QMainWindow):
             QMessageBox.warning(self, "Kein Chat", "Bitte zuerst einen Chat auswählen.")
             return
         
-
+        dialog = SearchWindow.SearchWindow(self.conn)
+        if dialog.exec_() == QDialog.Accepted:
+            ok = True
+            userdata = dialog.selected_user
+            username = userdata["nickname"]
+        else:
+            return
 
         if not ok or not username.strip():
             return

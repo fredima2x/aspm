@@ -47,14 +47,14 @@
       <item>
        <widget class="QPushButton" name="cancel_button">
         <property name="text">
-         <string>PushButton</string>
+         <string>Cancel...</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="enter_button">
         <property name="text">
-         <string>PushButton</string>
+         <string>Select...</string>
         </property>
        </widget>
       </item>

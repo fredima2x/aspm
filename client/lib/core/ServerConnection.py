@@ -5,7 +5,7 @@ import time
 import logging
 import os
 
-import client.lib.core.normals as normals
+import lib.core.normals as normals
 
 def fetch_certificate(host, port=normals.cert_port):
     if os.path.exists(normals.CERT_PATH):
