@@ -11,15 +11,14 @@ import lib.core.normals as normals
 log.basicConfig(level=log.INFO)
 
 def resource_path(relative_path):
-    """Gibt den korrekten Pfad zurück – im Dev-Modus und nach PyInstaller-Build."""
     if hasattr(sys, '_MEIPASS'):
-        # PyInstaller-Build: Dateien sind in einem temp-Ordner entpackt
-        base_path = sys._MEIPASS
+        # PyInstaller
+        base = sys._MEIPASS
     else:
-        # Normaler Dev-Modus
-        base_path = os.path.abspath(".")
-    
-    return os.path.join(base_path, relative_path)
+        # Immer relativ zu main.py – egal von wo gestartet wird
+        base = os.path.dirname(os.path.abspath(sys.argv[0]))
+    return os.path.join(base, relative_path)
+
 
 def fetch_certificate(host, port):
     if os.path.exists(normals.CERT_PATH):
