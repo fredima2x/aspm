@@ -30,7 +30,7 @@ from PyQt5 import uic
 # ─────────────────────────────────────────────────────────────────────────────
 #  Konfiguration
 # ─────────────────────────────────────────────────────────────────────────────
-MIRROR_SERVER_HOST = "localhost"
+MIRROR_SERVER_HOST = "fredima.de"
 MIRROR_SERVER_PORT = 8282
 GUI_ENABLED = True
 normals._servers = []
