@@ -1,3 +1,5 @@
+*--- Depreciated ---*
+
 # aspm
 
 **aspm** ist ein schlanker, moderner Messenger mit Fokus auf Einfachheit, Geschwindigkeit und Sicherheit.  
